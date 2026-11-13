@@ -46,6 +46,14 @@ jobs:
             echo "$h" | grep -qi "^$k:" || { echo "::error::Missing header $k"; exit 1; }
           done
           echo "Production OK"
+      - name: Email (MX, SPF, DMARC)
+        run: |
+          mx=$(dig +short @1.1.1.1 MX $DOMAIN); echo "MX: $mx"
+          spf=$(dig +short @1.1.1.1 TXT $DOMAIN | grep -i "v=spf1" || true); echo "SPF: $spf"
+          dmarc=$(dig +short @1.1.1.1 TXT _dmarc.$DOMAIN | grep -i "v=DMARC1" || true); echo "DMARC: $dmarc"
+          echo "$mx" | grep -qi "mx.cloudflare.net" && echo "MX OK" || echo "::warning::MX does not point to Cloudflare Email Routing"
+          echo "$spf" | grep -qi "_spf.mx.cloudflare.net" && echo "SPF OK" || echo "::warning::SPF record for Email Routing missing"
+          test -n "$dmarc" && echo "DMARC OK" || echo "::warning::DMARC record missing"
       - name: Redirects (www → apex, http → https)
         run: |
           w=$(curl -s -o /dev/null -m 20 -w "%{http_code} %{redirect_url}" "https://www.$DOMAIN/some/path")
