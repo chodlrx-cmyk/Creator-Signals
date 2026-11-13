@@ -9,10 +9,13 @@
     "check:js": "node scripts/check-js.mjs",
     "check:links": "node scripts/check-links.mjs",
     "dev": "wrangler dev",
-    "deploy:dry": "wrangler deploy --dry-run"
+    "deploy:dry": "wrangler deploy --dry-run",
+    "build:starter-kit": "node scripts/build-starter-kit.mjs"
   },
   "devDependencies": {
     "html-validate": "^11.21.0",
+    "pdf-lib": "^1.17.1",
+    "puppeteer-core": "^23.11.1",
     "wrangler": "^4.161.0"
   },
   "engines": {

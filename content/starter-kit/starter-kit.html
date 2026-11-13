@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Creator Starter Kit — Creator Signals</title>
+<style>
+@font-face{font-family:P;src:url(../../public/assets/fonts/pjs-400.woff2);font-weight:400}
+@font-face{font-family:P;src:url(../../public/assets/fonts/pjs-600.woff2);font-weight:600}
+@font-face{font-family:P;src:url(../../public/assets/fonts/pjs-700.woff2);font-weight:700}
+@font-face{font-family:P;src:url(../../public/assets/fonts/pjs-800.woff2);font-weight:800}
+@page{size:A4;margin:0}
+:root{--ink:#0B0B0F;--ink2:#3A3A44;--muted:#6B6B78;--line:#E4E4EC;--soft:#F7F7FA;--cyan:#25F4EE;--cyand:#0A9E9A;--pink:#FE2C55;--violet:#6D28F5;--vl:#EFE9FF;--grad:linear-gradient(90deg,#25F4EE,#6D28F5 55%,#FE2C55)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{font-family:P,sans-serif;color:var(--ink);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.page{width:210mm;height:297mm;padding:20mm 18mm 22mm;position:relative;overflow:hidden;page-break-after:always;background:#fff}
+.page:last-child{page-break-after:auto}
+.foot{position:absolute;left:18mm;right:18mm;bottom:10mm;display:flex;justify-content:space-between;font-size:8.5pt;color:var(--muted);font-weight:600;border-top:1px solid var(--line);padding-top:3mm}
+.foot b{color:var(--ink)}
+.kicker{display:flex;align-items:center;gap:8px;font-size:8.5pt;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+.kicker::before{content:"";width:18px;height:3px;border-radius:3px;background:var(--grad)}
+h1{font-size:30pt;line-height:1.02;letter-spacing:-.03em;font-weight:800;margin:4mm 0 4mm}
+h2{font-size:14pt;letter-spacing:-.01em;margin:7mm 0 2.5mm}
+h3{font-size:11pt;margin:4mm 0 1.5mm}
+p,li{font-size:10.5pt;line-height:1.55;color:var(--ink2)}
+p+p{margin-top:2.5mm}
+.lead{font-size:12pt;color:var(--ink2);max-width:150mm}
+ul.tick{list-style:none;margin-top:2mm}
+ul.tick li{padding-left:7mm;position:relative;margin-bottom:1.6mm}
+ul.tick li::before{content:"";position:absolute;left:0;top:1.2mm;width:4mm;height:4mm;border-radius:50%;background:var(--violet)}
+ul.x li::before{background:var(--pink)}
+.grad{color:var(--violet)}
+.box{border:1px solid var(--line);border-radius:4mm;padding:5mm;background:#fff}
+.soft{background:var(--soft);border:0}
+.dark{background:var(--ink);color:#fff;border:0}
+.dark p,.dark li{color:#C9C9D4}
+.tip{border-radius:4mm;padding:4mm 5mm;background:linear-gradient(135deg,rgba(37,244,238,.14),rgba(109,40,245,.09) 50%,rgba(254,44,85,.12));font-size:10pt;margin-top:5mm}
+.tip b{color:var(--ink)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}
+.lbl{font-size:9pt;font-weight:700;color:var(--ink2);margin:3.5mm 0 1.2mm}
+.f{height:9mm;border:1px solid #C9C9D6;border-radius:2mm;background:#fff}
+.f.m2{height:18mm}.f.m3{height:27mm}.f.m4{height:36mm}
+.step{display:flex;gap:4mm;align-items:flex-start;margin-top:3.5mm}
+.num{flex:none;width:8mm;height:8mm;border-radius:2.5mm;background:var(--ink);color:#fff;font-weight:800;font-size:9pt;display:flex;align-items:center;justify-content:center}
+.method{display:flex;gap:2mm;margin-top:4mm}
+.method span{flex:1;text-align:center;padding:3mm 1mm;border-radius:3mm;font-weight:800;font-size:9.5pt;background:var(--soft)}
+.method span:nth-child(2){color:var(--pink)}.method span:nth-child(3){color:var(--violet)}.method span:nth-child(4){color:var(--cyand)}
+.toc{list-style:none;counter-reset:t;margin-top:3mm}
+.toc li{counter-increment:t;display:flex;justify-content:space-between;border-bottom:1px dashed var(--line);padding:2mm 0;font-weight:600;color:var(--ink)}
+.toc li::before{content:counter(t,decimal-leading-zero);color:var(--violet);font-weight:800;width:10mm}
+.toc li span{flex:1}
+.toc li i{font-style:normal;color:var(--muted)}
+table{width:100%;border-collapse:collapse;margin-top:3mm}
+th{font-size:8.5pt;text-align:left;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--ink);padding:2.2mm 2mm}
+th:first-child{border-radius:2mm 0 0 0}th:last-child{border-radius:0 2mm 0 0}
+td{border-bottom:1px solid var(--line);padding:1.4mm 1.4mm;vertical-align:middle;font-size:9.5pt}
+td .f{height:8mm}
+td.d{font-weight:800;color:var(--violet);width:12mm}
+.hook{display:flex;gap:3mm;padding:2.6mm 0;border-bottom:1px solid var(--line)}
+.hook em{flex:none;width:30mm;font-style:normal;font-size:8pt;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--violet);padding-top:.6mm}
+.hook b{font-size:10.5pt}
+.metric{padding:3mm 0;border-bottom:1px solid var(--line)}
+.metric b{display:block;font-size:10.5pt}
+.formula{margin-top:4mm;padding:4mm 5mm;border-radius:3mm;background:var(--ink);color:#fff;font-weight:700;font-size:11pt;text-align:center}
+.formula small{display:block;font-size:8.5pt;color:#A7A7B5;font-weight:600;margin-top:1mm}
+/* cover */
+.cover{background:#fff;padding:22mm 18mm}
+.cover .logo{display:flex;align-items:center;gap:4mm}
+.cover .logo img{height:13mm}
+.cover .logo b{font-size:15pt;display:block;line-height:1.1}
+.cover .logo small{font-size:7.5pt;font-weight:800;letter-spacing:.3em;color:var(--violet)}
+.cover h1{font-size:52pt;margin-top:44mm;line-height:.95}
+.cover .sub{font-size:14pt;color:var(--ink2);margin-top:6mm;max-width:140mm}
+.cover .chips{display:flex;flex-wrap:wrap;gap:2.5mm;margin-top:9mm}
+.cover .chips span{padding:2mm 4mm;border-radius:99px;background:var(--soft);font-weight:700;font-size:9.5pt}
+.cover svg{position:absolute;left:0;bottom:0;width:100%;height:70mm}
+.cover .ver{position:absolute;left:18mm;bottom:12mm;z-index:2;color:#fff;font-weight:700;font-size:9pt}
+</style>
+</head>
+<body>
+
+<!-- 1 COVER -->
+<section class="page cover">
+  <div class="logo"><img src="../../public/assets/img/cs-mark.png" alt=""><span><b>Creator Signals</b><small>LEARN · GROW · EARN</small></span></div>
+  <div class="kicker" style="margin-top:40mm">Free download</div>
+  <h1 style="margin-top:4mm">Creator<br><span class="grad">Starter Kit.</span></h1>
+  <p class="sub">Start creating with a clear plan. A practical workbook for your first week as a TikTok creator.</p>
+  <div class="chips"><span>Niche worksheet</span><span>10 hook formulas</span><span>Script template</span><span>7-day planner</span><span>Analytics tracker</span><span>Weekly review</span></div>
+  <svg viewBox="0 0 1440 300" preserveAspectRatio="none"><path d="M0 170 C 360 60,720 260,1080 120 S 1440 80,1440 80 V300 H0Z" fill="#25F4EE"/><path d="M0 215 C 380 120,760 280,1120 175 S 1440 140,1440 140 V300 H0Z" fill="#FE2C55"/><path d="M0 255 C 400 200,800 290,1440 220 V300 H0Z" fill="#0B0B0F"/></svg>
+  <span class="ver">Version 1.0 · November 2026 · creatorsignals.blog</span>
+</section>
+
+<!-- 2 WELCOME -->
+<section class="page">
+  <div class="kicker">Welcome</div>
+  <h1>Stop guessing.<br><span class="grad">Start creating.</span></h1>
+  <p class="lead">This kit helps you go from “I want to start” to a clear plan and your first published videos — in about one week.</p>
+  <h2>How to use this kit</h2>
+  <div class="step"><span class="num">1</span><p><b>Work through the pages in order.</b> Each page has a short explanation and an exercise.</p></div>
+  <div class="step"><span class="num">2</span><p><b>Fill it in digitally or print it.</b> All boxes are fillable in a PDF reader (e.g. Adobe Acrobat Reader, Preview or your browser). Save the file after typing.</p></div>
+  <div class="step"><span class="num">3</span><p><b>Publish, measure, reflect.</b> The last pages help you track your first 7 videos and learn from them.</p></div>
+  <h2>The Creator Signals Method</h2>
+  <p>Everything we teach follows five steps. You'll use all of them in this kit.</p>
+  <div class="method"><span>Learn</span><span>Create</span><span>Test</span><span>Analyze</span><span>Improve</span></div>
+  <h2>What's inside</h2>
+  <ol class="toc">
+    <li><span>How TikTok discovery works — the honest version</span><i>p. 3</i></li>
+    <li><span>Your creator why &amp; niche</span><i>p. 4</i></li>
+    <li><span>Know your audience</span><i>p. 5</i></li>
+    <li><span>Your 3 content pillars</span><i>p. 6</i></li>
+    <li><span>10 hook formulas</span><i>p. 7</i></li>
+    <li><span>Write your own hooks</span><i>p. 8</i></li>
+    <li><span>Simple video script</span><i>p. 9</i></li>
+    <li><span>7-day content plan</span><i>p. 10</i></li>
+    <li><span>Analytics basics</span><i>p. 11</i></li>
+    <li><span>7-video tracker &amp; weekly review</span><i>p. 12–13</i></li>
+  </ol>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>2</span></div>
+</section>
+
+<!-- 3 DISCOVERY -->
+<section class="page">
+  <div class="kicker">01 · Learn</div>
+  <h1>How discovery works —<br>the honest version.</h1>
+  <p class="lead">Nobody outside TikTok knows the exact formula, and it changes over time. Anyone who promises “the secret algorithm hack” is guessing. What we <i>do</i> know is enough to start well.</p>
+  <h2>What TikTok says it looks at</h2>
+  <p>In its own public explanations, TikTok says the For You feed is personalised using signals such as:</p>
+  <ul class="tick">
+    <li><b>How people interact</b> with videos — for example watching, rewatching, liking, sharing, commenting or skipping.</li>
+    <li><b>Information in the video</b> — such as captions, sounds and topics.</li>
+    <li><b>Settings</b> — like language and country, which help decide who might be interested.</li>
+  </ul>
+  <p style="margin-top:3mm">Check TikTok's own Creator Academy and help pages for the latest details — platforms update their explanations regularly.</p>
+  <h2>What this means for you</h2>
+  <div class="g2">
+    <div class="box soft"><h3 style="margin-top:0">Focus on</h3><ul class="tick"><li>A clear opening that tells viewers why to stay</li><li>One topic per video</li><li>Content for a specific audience</li><li>Consistency you can keep up</li></ul></div>
+    <div class="box soft"><h3 style="margin-top:0">Ignore</h3><ul class="tick x"><li>“Magic” hashtags that guarantee reach</li><li>One perfect posting time for everyone</li><li>Shadowban rumours without evidence</li><li>Promises of going viral</li></ul></div>
+  </div>
+  <div class="tip"><b>Signal, not proof.</b> One video doing well (or badly) tells you very little. Patterns across several videos tell you a lot. That's why this kit makes you track 7.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>3</span></div>
+</section>
+
+<!-- 4 WHY & NICHE -->
+<section class="page">
+  <div class="kicker">02 · Create</div>
+  <h1>Your creator why<br>&amp; niche.</h1>
+  <p class="lead">A niche is not a cage. It's a promise: “if you follow me, you'll get <i>this</i>.” Start focused — you can widen later.</p>
+  <div class="lbl">Why do I want to create content? (What do I want to get out of it?)</div>
+  <div class="f m2" data-field="why" data-multi></div>
+  <h2>Niche finder</h2>
+  <p>Write down three possible niches. Score each from 1 (low) to 5 (high).</p>
+  <table>
+    <tr><th>Possible niche</th><th style="width:22mm">I enjoy it</th><th style="width:22mm">I know a bit</th><th style="width:22mm">People search it</th><th style="width:22mm">I can post weekly</th></tr>
+    <tr><td><div class="f" data-field="niche1"></div></td><td><div class="f" data-field="niche1_a"></div></td><td><div class="f" data-field="niche1_b"></div></td><td><div class="f" data-field="niche1_c"></div></td><td><div class="f" data-field="niche1_d"></div></td></tr>
+    <tr><td><div class="f" data-field="niche2"></div></td><td><div class="f" data-field="niche2_a"></div></td><td><div class="f" data-field="niche2_b"></div></td><td><div class="f" data-field="niche2_c"></div></td><td><div class="f" data-field="niche2_d"></div></td></tr>
+    <tr><td><div class="f" data-field="niche3"></div></td><td><div class="f" data-field="niche3_a"></div></td><td><div class="f" data-field="niche3_b"></div></td><td><div class="f" data-field="niche3_c"></div></td><td><div class="f" data-field="niche3_d"></div></td></tr>
+  </table>
+  <p style="margin-top:3mm;font-size:9.5pt">Tip for “people search it”: type the topic into TikTok's search bar and look at the suggestions and existing videos.</p>
+  <div class="lbl">My chosen niche (for the next 30 days)</div>
+  <div class="f" data-field="niche_choice"></div>
+  <div class="lbl">My one-sentence promise: “I help ___ with ___ so they can ___.”</div>
+  <div class="f m2" data-field="promise" data-multi></div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>4</span></div>
+</section>
+
+<!-- 5 AUDIENCE -->
+<section class="page">
+  <div class="kicker">02 · Create</div>
+  <h1>Know your<br>audience.</h1>
+  <p class="lead">Picture one real type of person you want to help. Writing for “everyone” usually reaches no one.</p>
+  <div class="g2">
+    <div><div class="lbl">Who are they? (stage of life, situation)</div><div class="f m2" data-field="aud_who" data-multi></div></div>
+    <div><div class="lbl">What level are they at? (beginner, some experience…)</div><div class="f m2" data-field="aud_level" data-multi></div></div>
+  </div>
+  <div class="lbl">What problems or questions do they have about my niche? (list 3–5)</div>
+  <div class="f m3" data-field="aud_problems" data-multi></div>
+  <div class="lbl">What result do they want?</div>
+  <div class="f m2" data-field="aud_result" data-multi></div>
+  <div class="g2">
+    <div><div class="lbl">Which words would they type into search?</div><div class="f m2" data-field="aud_search" data-multi></div></div>
+    <div><div class="lbl">Which creators do they already watch?</div><div class="f m2" data-field="aud_creators" data-multi></div></div>
+  </div>
+  <div class="tip"><b>Quick research:</b> read the comments under popular videos in your niche. The questions people ask there are ready-made video ideas.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>5</span></div>
+</section>
+
+<!-- 6 PILLARS -->
+<section class="page">
+  <div class="kicker">02 · Create</div>
+  <h1>Your 3 content<br>pillars.</h1>
+  <p class="lead">Content pillars are the 3 recurring themes of your account. They make planning easy and help viewers know what to expect.</p>
+  <div class="box soft" style="margin-top:5mm"><p><b>Example — fitness for busy parents:</b> ① 15-minute home workouts &nbsp; ② beginner mistakes &amp; fixes &nbsp; ③ honest progress updates</p></div>
+  <div class="g3" style="margin-top:4mm">
+    <div class="box"><div class="kicker">Pillar 1</div><div class="lbl">Theme</div><div class="f" data-field="p1"></div><div class="lbl">3 video ideas</div><div class="f m4" data-field="p1_ideas" data-multi></div></div>
+    <div class="box"><div class="kicker">Pillar 2</div><div class="lbl">Theme</div><div class="f" data-field="p2"></div><div class="lbl">3 video ideas</div><div class="f m4" data-field="p2_ideas" data-multi></div></div>
+    <div class="box"><div class="kicker">Pillar 3</div><div class="lbl">Theme</div><div class="f" data-field="p3"></div><div class="lbl">3 video ideas</div><div class="f m4" data-field="p3_ideas" data-multi></div></div>
+  </div>
+  <h2>Profile check</h2>
+  <ul class="tick">
+    <li>My username is easy to read and remember</li>
+    <li>My bio says who I help and what they get</li>
+    <li>My profile photo is clear, even at small size</li>
+  </ul>
+  <div class="lbl">My new bio (max. ~80 characters)</div>
+  <div class="f" data-field="bio"></div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>6</span></div>
+</section>
+
+<!-- 7 HOOKS -->
+<section class="page">
+  <div class="kicker">01 · Learn</div>
+  <h1>10 hook formulas.</h1>
+  <p class="lead">A hook is the first line or moment of your video. It answers the viewer's silent question: “why should I keep watching?” Replace <b>[topic]</b> and <b>[audience]</b> with your own.</p>
+  <div style="margin-top:4mm">
+    <div class="hook"><em>Mistake</em><b>“3 mistakes [audience] make with [topic] — and how to fix them.”</b></div>
+    <div class="hook"><em>How-to</em><b>“How to start with [topic], even as a complete beginner.”</b></div>
+    <div class="hook"><em>Result-first</em><b>“I tried [topic] for 7 days. Here's what changed.”</b></div>
+    <div class="hook"><em>Question</em><b>“Is [topic] really worth it for [audience]?”</b></div>
+    <div class="hook"><em>Curiosity</em><b>“The one tip about [topic] I wish I'd known sooner.”</b></div>
+    <div class="hook"><em>Bold claim</em><b>“[Topic] is simpler than you think.”</b></div>
+    <div class="hook"><em>List</em><b>“3 things every beginner should know about [topic].”</b></div>
+    <div class="hook"><em>Story</em><b>“The day [topic] finally clicked for me.”</b></div>
+    <div class="hook"><em>Save this</em><b>“Save this: a simple checklist for [topic].”</b></div>
+    <div class="hook"><em>Contrast</em><b>“Everyone says this about [topic]. Here's what I do instead.”</b></div>
+  </div>
+  <div class="tip"><b>Make the hook true.</b> The rest of the video must deliver what the hook promises. Clickbait that doesn't deliver makes people leave — and stop trusting you.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>7</span></div>
+</section>
+
+<!-- 8 WRITE HOOKS -->
+<section class="page">
+  <div class="kicker">02 · Create · 03 · Test</div>
+  <h1>Write your<br>own hooks.</h1>
+  <p class="lead">Pick one video idea from your pillars. Write five different openings for the <i>same</i> video. Then choose the two strongest to test.</p>
+  <div class="lbl">My video idea</div>
+  <div class="f" data-field="hk_idea"></div>
+  <table>
+    <tr><th style="width:10mm">#</th><th>Hook</th><th style="width:30mm">Formula used</th></tr>
+    <tr><td class="d">1</td><td><div class="f" data-field="hk1"></div></td><td><div class="f" data-field="hk1_t"></div></td></tr>
+    <tr><td class="d">2</td><td><div class="f" data-field="hk2"></div></td><td><div class="f" data-field="hk2_t"></div></td></tr>
+    <tr><td class="d">3</td><td><div class="f" data-field="hk3"></div></td><td><div class="f" data-field="hk3_t"></div></td></tr>
+    <tr><td class="d">4</td><td><div class="f" data-field="hk4"></div></td><td><div class="f" data-field="hk4_t"></div></td></tr>
+    <tr><td class="d">5</td><td><div class="f" data-field="hk5"></div></td><td><div class="f" data-field="hk5_t"></div></td></tr>
+  </table>
+  <h2>My test</h2>
+  <div class="g2">
+    <div><div class="lbl">Hook A</div><div class="f" data-field="hk_a"></div></div>
+    <div><div class="lbl">Hook B</div><div class="f" data-field="hk_b"></div></div>
+  </div>
+  <div class="lbl">What I keep the same (topic, length, posting time…)</div>
+  <div class="f m2" data-field="hk_same" data-multi></div>
+  <div class="tip"><b>Need more ideas?</b> The free Hook Builder at <b>creatorsignals.blog/tools</b> gives you 10 structures for any topic.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>8</span></div>
+</section>
+
+<!-- 9 SCRIPT -->
+<section class="page">
+  <div class="kicker">02 · Create</div>
+  <h1>Simple video<br>script.</h1>
+  <p class="lead">Most short educational videos work well with this five-part structure. Keep each part short — say it out loud and cut what you don't need.</p>
+  <div class="step"><span class="num">1</span><div style="flex:1"><p><b>Hook</b> — the first line. Why should they stay?</p><div class="f" data-field="sc_hook"></div></div></div>
+  <div class="step"><span class="num">2</span><div style="flex:1"><p><b>Context</b> — who is this for, what problem?</p><div class="f m2" data-field="sc_context" data-multi></div></div></div>
+  <div class="step"><span class="num">3</span><div style="flex:1"><p><b>Value</b> — the tip, steps or story (the main part).</p><div class="f m3" data-field="sc_value" data-multi></div></div></div>
+  <div class="step"><span class="num">4</span><div style="flex:1"><p><b>Proof or example</b> — show it, demonstrate it, give an example.</p><div class="f m2" data-field="sc_proof" data-multi></div></div></div>
+  <div class="step"><span class="num">5</span><div style="flex:1"><p><b>Ending</b> — a simple next step (“save this”, “try it today”, a question for comments).</p><div class="f" data-field="sc_end"></div></div></div>
+  <div class="g2" style="margin-top:3mm">
+    <div><div class="lbl">Caption (with words people search for)</div><div class="f m2" data-field="sc_caption" data-multi></div></div>
+    <div><div class="lbl">On-screen text / visuals</div><div class="f m2" data-field="sc_visual" data-multi></div></div>
+  </div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>9</span></div>
+</section>
+
+<!-- 10 7-DAY PLAN -->
+<section class="page">
+  <div class="kicker">02 · Create</div>
+  <h1>7-day<br>content plan.</h1>
+  <p class="lead">Plan a week you can actually keep up. Three good videos are better than seven rushed ones — post as often as you can sustain.</p>
+  <table>
+    <tr><th style="width:14mm">Day</th><th>Video idea</th><th style="width:26mm">Pillar</th><th>Hook</th><th style="width:18mm">Done ✓</th></tr>
+    <tr><td class="d">Mon</td><td><div class="f" data-field="d1_idea"></div></td><td><div class="f" data-field="d1_p"></div></td><td><div class="f" data-field="d1_hook"></div></td><td><div class="f" data-field="d1_done"></div></td></tr>
+    <tr><td class="d">Tue</td><td><div class="f" data-field="d2_idea"></div></td><td><div class="f" data-field="d2_p"></div></td><td><div class="f" data-field="d2_hook"></div></td><td><div class="f" data-field="d2_done"></div></td></tr>
+    <tr><td class="d">Wed</td><td><div class="f" data-field="d3_idea"></div></td><td><div class="f" data-field="d3_p"></div></td><td><div class="f" data-field="d3_hook"></div></td><td><div class="f" data-field="d3_done"></div></td></tr>
+    <tr><td class="d">Thu</td><td><div class="f" data-field="d4_idea"></div></td><td><div class="f" data-field="d4_p"></div></td><td><div class="f" data-field="d4_hook"></div></td><td><div class="f" data-field="d4_done"></div></td></tr>
+    <tr><td class="d">Fri</td><td><div class="f" data-field="d5_idea"></div></td><td><div class="f" data-field="d5_p"></div></td><td><div class="f" data-field="d5_hook"></div></td><td><div class="f" data-field="d5_done"></div></td></tr>
+    <tr><td class="d">Sat</td><td><div class="f" data-field="d6_idea"></div></td><td><div class="f" data-field="d6_p"></div></td><td><div class="f" data-field="d6_hook"></div></td><td><div class="f" data-field="d6_done"></div></td></tr>
+    <tr><td class="d">Sun</td><td><div class="f" data-field="d7_idea"></div></td><td><div class="f" data-field="d7_p"></div></td><td><div class="f" data-field="d7_hook"></div></td><td><div class="f" data-field="d7_done"></div></td></tr>
+  </table>
+  <h2>Batch it</h2>
+  <ul class="tick">
+    <li><b>Plan</b> all ideas and hooks in one sitting</li>
+    <li><b>Film</b> 2–3 videos in one session</li>
+    <li><b>Edit &amp; schedule</b> in another session</li>
+  </ul>
+  <div class="tip"><b>Prefer planning online?</b> The free 30-Day Content Planner at <b>creatorsignals.blog/tools/content-planner</b> saves everything in your browser.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>10</span></div>
+</section>
+
+<!-- 11 ANALYTICS -->
+<section class="page">
+  <div class="kicker">04 · Analyze</div>
+  <h1>Analytics basics.</h1>
+  <p class="lead">TikTok shows analytics for your videos in the app (the exact names and location can change with app updates). These are the numbers worth understanding first.</p>
+  <div style="margin-top:3mm">
+    <div class="metric"><b>Views</b><p>How many times the video was played. Shows reach — not whether people liked it.</p></div>
+    <div class="metric"><b>Average watch time</b><p>How long people watched on average. Compare it with the length of your video.</p></div>
+    <div class="metric"><b>Watched full video / retention</b><p>How many viewers stayed until the end, and where they dropped off. A big drop at the start often means the hook can be clearer.</p></div>
+    <div class="metric"><b>Likes, comments, shares, saves</b><p>Shares and saves often mean the content was useful enough to keep or pass on.</p></div>
+    <div class="metric"><b>New followers</b><p>How many people followed after this video — a sign they want more of the same.</p></div>
+    <div class="metric"><b>Traffic source</b><p>Where views came from (e.g. For You, search, your profile). Search views mean your topic and caption match what people look for.</p></div>
+  </div>
+  <div class="formula">Engagement rate = (likes + comments + shares) ÷ views × 100%<small>One common definition. Others exist — always use the same one when you compare your own videos.</small></div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>11</span></div>
+</section>
+
+<!-- 12 TRACKER -->
+<section class="page">
+  <div class="kicker">04 · Analyze</div>
+  <h1>7-video tracker.</h1>
+  <p class="lead">Fill in each video 2–3 days after posting, so the numbers have time to settle. Compare your videos with <i>each other</i>, not with other creators.</p>
+  <table style="table-layout:fixed">
+    <tr><th style="width:9mm">#</th><th style="width:44mm">Topic / hook</th><th>Views</th><th>Avg. watch</th><th>Likes</th><th>Comm.</th><th>Shares</th><th>Saves</th><th>Eng. %</th></tr>
+    <tr><td class="d">1</td><td><div class="f" data-field="t1_topic"></div></td><td><div class="f" data-field="t1_v"></div></td><td><div class="f" data-field="t1_w"></div></td><td><div class="f" data-field="t1_l"></div></td><td><div class="f" data-field="t1_c"></div></td><td><div class="f" data-field="t1_s"></div></td><td><div class="f" data-field="t1_sv"></div></td><td><div class="f" data-field="t1_e"></div></td></tr>
+    <tr><td class="d">2</td><td><div class="f" data-field="t2_topic"></div></td><td><div class="f" data-field="t2_v"></div></td><td><div class="f" data-field="t2_w"></div></td><td><div class="f" data-field="t2_l"></div></td><td><div class="f" data-field="t2_c"></div></td><td><div class="f" data-field="t2_s"></div></td><td><div class="f" data-field="t2_sv"></div></td><td><div class="f" data-field="t2_e"></div></td></tr>
+    <tr><td class="d">3</td><td><div class="f" data-field="t3_topic"></div></td><td><div class="f" data-field="t3_v"></div></td><td><div class="f" data-field="t3_w"></div></td><td><div class="f" data-field="t3_l"></div></td><td><div class="f" data-field="t3_c"></div></td><td><div class="f" data-field="t3_s"></div></td><td><div class="f" data-field="t3_sv"></div></td><td><div class="f" data-field="t3_e"></div></td></tr>
+    <tr><td class="d">4</td><td><div class="f" data-field="t4_topic"></div></td><td><div class="f" data-field="t4_v"></div></td><td><div class="f" data-field="t4_w"></div></td><td><div class="f" data-field="t4_l"></div></td><td><div class="f" data-field="t4_c"></div></td><td><div class="f" data-field="t4_s"></div></td><td><div class="f" data-field="t4_sv"></div></td><td><div class="f" data-field="t4_e"></div></td></tr>
+    <tr><td class="d">5</td><td><div class="f" data-field="t5_topic"></div></td><td><div class="f" data-field="t5_v"></div></td><td><div class="f" data-field="t5_w"></div></td><td><div class="f" data-field="t5_l"></div></td><td><div class="f" data-field="t5_c"></div></td><td><div class="f" data-field="t5_s"></div></td><td><div class="f" data-field="t5_sv"></div></td><td><div class="f" data-field="t5_e"></div></td></tr>
+    <tr><td class="d">6</td><td><div class="f" data-field="t6_topic"></div></td><td><div class="f" data-field="t6_v"></div></td><td><div class="f" data-field="t6_w"></div></td><td><div class="f" data-field="t6_l"></div></td><td><div class="f" data-field="t6_c"></div></td><td><div class="f" data-field="t6_s"></div></td><td><div class="f" data-field="t6_sv"></div></td><td><div class="f" data-field="t6_e"></div></td></tr>
+    <tr><td class="d">7</td><td><div class="f" data-field="t7_topic"></div></td><td><div class="f" data-field="t7_v"></div></td><td><div class="f" data-field="t7_w"></div></td><td><div class="f" data-field="t7_l"></div></td><td><div class="f" data-field="t7_c"></div></td><td><div class="f" data-field="t7_s"></div></td><td><div class="f" data-field="t7_sv"></div></td><td><div class="f" data-field="t7_e"></div></td></tr>
+  </table>
+  <h2>Look for patterns</h2>
+  <div class="g2">
+    <div><div class="lbl">Which video kept people watching longest?</div><div class="f m2" data-field="tr_best" data-multi></div></div>
+    <div><div class="lbl">What did the strongest videos have in common?</div><div class="f m2" data-field="tr_common" data-multi></div></div>
+  </div>
+  <div class="tip"><b>Calculator:</b> the free Engagement Calculator at <b>creatorsignals.blog/tools</b> works out the engagement % and compares two videos for you.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>12</span></div>
+</section>
+
+<!-- 13 REVIEW -->
+<section class="page">
+  <div class="kicker">05 · Improve</div>
+  <h1>Weekly review.</h1>
+  <p class="lead">Ten minutes of honest reflection is where real improvement happens. Do this at the end of every week.</p>
+  <div class="g3" style="margin-top:4mm">
+    <div><div class="lbl">Videos published</div><div class="f" data-field="rv_pub"></div></div>
+    <div><div class="lbl">Total views</div><div class="f" data-field="rv_views"></div></div>
+    <div><div class="lbl">Hooks tested</div><div class="f" data-field="rv_hooks"></div></div>
+  </div>
+  <div class="lbl">✓ What worked this week?</div><div class="f m3" data-field="rv_worked" data-multi></div>
+  <div class="lbl">✕ What didn't work — and why might that be?</div><div class="f m3" data-field="rv_didnt" data-multi></div>
+  <div class="lbl">→ What will I test next week? (one thing at a time)</div><div class="f m2" data-field="rv_next" data-multi></div>
+  <div class="lbl">How do I feel about creating right now? (energy, fun, time)</div><div class="f m2" data-field="rv_feel" data-multi></div>
+  <div class="tip"><b>Be kind to yourself.</b> Small numbers are normal at the start. You're building a skill — the reviews are your proof of progress.</div>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>13</span></div>
+</section>
+
+<!-- 14 NEXT STEPS -->
+<section class="page">
+  <div class="kicker">What's next</div>
+  <h1>Keep the<br><span class="grad">signal going.</span></h1>
+  <p class="lead">You now have a niche, an audience, three pillars, hooks, a script, a plan and a tracker. That's more structure than most creators ever start with.</p>
+  <h2>Free on creatorsignals.blog</h2>
+  <ul class="tick">
+    <li><b>Hook Builder</b> — 10 hook ideas for any topic</li>
+    <li><b>Engagement Calculator</b> — compare two videos</li>
+    <li><b>30-Day Content Planner</b> — plan, log results, weekly reviews, CSV export</li>
+    <li><b>Free sample lesson</b> — Day 8: Understanding TikTok hooks</li>
+  </ul>
+  <div class="box dark" style="margin-top:7mm">
+    <div class="kicker" style="color:#C9C9D4">Coming soon</div>
+    <h2 style="margin-top:2mm;color:#fff">30-Day Creator Launchpad</h2>
+    <p>30 daily lessons and assignments, a full workbook, content calendar, hook library and analytics tracker — the complete next step after this kit.</p>
+    <p style="margin-top:2mm;color:#25F4EE;font-weight:700">creatorsignals.blog/academy</p>
+  </div>
+  <h2>Good to know</h2>
+  <p style="font-size:9pt">Creator Signals is an independent educational platform and is not affiliated with, endorsed by or sponsored by TikTok or ByteDance. TikTok is a trademark of its owner. This kit is for educational purposes; results such as views, followers or income are not guaranteed.</p>
+  <p style="font-size:9pt"><b>Licence:</b> free for personal use. Please don't resell or republish this file — share the link <b>creatorsignals.blog/starter-kit</b> instead. © 2026 Creator Signals. Version 1.0, November 2026.</p>
+  <p style="font-size:9pt">Questions or feedback: hello@creatorsignals.blog · TikTok @creatorsignals</p>
+  <div class="foot"><span><b>Creator Signals</b> · Creator Starter Kit</span><span>14</span></div>
+</section>
+
+</body>
+</html>
