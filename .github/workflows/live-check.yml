@@ -1,0 +1,46 @@
+name: Live site check
+
+# Checks DNS, HTTPS and security headers of the production site.
+on:
+  schedule:
+    - cron: "17 6 * * *"   # daily
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [".github/workflows/live-check.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DOMAIN: creatorsignals.blog
+      WORKERS_DEV: creator-signals.chodlrx.workers.dev
+    steps:
+      - name: DNS
+        run: |
+          for q in "NS $DOMAIN" "SOA $DOMAIN" "A $DOMAIN" "AAAA $DOMAIN" "CNAME www.$DOMAIN" "A www.$DOMAIN" "MX $DOMAIN" "TXT $DOMAIN"; do
+            set -- $q; echo "== $1 $2: $(dig +short @1.1.1.1 $2 $1 | tr '\n' ' ')"
+          done
+          echo "== whois (nameservers / status)"
+          whois "$DOMAIN" 2>/dev/null | grep -iE "^ *(registrar:|name server|domain status|creation date|registry expiry)" | head -20 || true
+      - name: HTTP
+        run: |
+          for u in "https://$DOMAIN/" "https://www.$DOMAIN/" "http://$DOMAIN/" "https://$WORKERS_DEV/" "https://$DOMAIN/does-not-exist"; do
+            echo "== $u"; curl -sS -o /dev/null -m 20 -w "status=%{http_code} redirect=%{redirect_url} ip=%{remote_ip}\n" "$u" || true
+          done
+          echo "== headers https://$DOMAIN/"; curl -sSI -m 20 "https://$DOMAIN/" || true
+          echo "== headers https://$WORKERS_DEV/"; curl -sSI -m 20 "https://$WORKERS_DEV/" | grep -iE "^(HTTP|x-robots|content-security|strict)" || true
+      - name: Assert production is healthy
+        run: |
+          code=$(curl -s -o /tmp/home.html -m 20 -w "%{http_code}" "https://$DOMAIN/" || echo 000)
+          test "$code" = "200" || { echo "::error::https://$DOMAIN/ returned $code"; exit 1; }
+          grep -q "Stop guessing" /tmp/home.html || { echo "::error::Homepage content not found"; exit 1; }
+          h=$(curl -sI -m 20 "https://$DOMAIN/")
+          for k in content-security-policy strict-transport-security x-content-type-options x-frame-options; do
+            echo "$h" | grep -qi "^$k:" || { echo "::error::Missing header $k"; exit 1; }
+          done
+          echo "Production OK"
