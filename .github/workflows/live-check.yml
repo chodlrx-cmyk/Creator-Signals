@@ -45,6 +45,11 @@ jobs:
           for k in content-security-policy strict-transport-security x-content-type-options x-frame-options; do
             echo "$h" | grep -qi "^$k:" || { echo "::error::Missing header $k"; exit 1; }
           done
+          for path in /starter-kit/ /tools/ /tools/content-planner/ /academy/; do
+            c=$(curl -s -o /dev/null -m 20 -w "%{http_code}" "https://$DOMAIN$path"); test "$c" = "200" || { echo "::error::$path returned $c"; exit 1; }
+          done
+          t=$(curl -sI -m 20 "https://$DOMAIN/downloads/creator-starter-kit.pdf" | grep -i "^content-type:" | tr -d '\r')
+          echo "$t" | grep -qi "application/pdf" || { echo "::error::Starter Kit PDF not served as PDF ($t)"; exit 1; }
           echo "Production OK"
       - name: Email (MX, SPF, DMARC)
         run: |
