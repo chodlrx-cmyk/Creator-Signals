@@ -17,4 +17,4 @@ We aim to respond within 7 days.
 - HTTPS only with HSTS
 - No third-party scripts, fonts, trackers or cookies
 - All user input is rendered with `textContent` (no HTML injection)
-- `*.pages.dev` deployments are marked `noindex`
+- The `*.workers.dev` copy is marked `noindex`; the custom domain is canonical

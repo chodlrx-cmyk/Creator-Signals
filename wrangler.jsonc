@@ -1,9 +1,14 @@
-// Cloudflare Pages configuration.
-// `pages_build_output_dir` makes Pages publish the ./public folder,
-// so the dashboard's "build output directory" setting is overridden by this file.
+// Cloudflare Workers (static assets) configuration for creatorsignals.blog.
+// Deployed automatically by Workers Builds on every push to `main`.
+// Security headers, CSP and caching live in public/_headers.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "creator-signals",
   "compatibility_date": "2026-11-01",
-  "pages_build_output_dir": "./public"
+  "assets": {
+    "directory": "./public",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "observability": { "enabled": true }
 }

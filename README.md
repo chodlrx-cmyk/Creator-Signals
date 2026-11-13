@@ -5,7 +5,7 @@
 Website of **Creator Signals** — an independent learning platform for beginner TikTok creators.
 *Learn → Create → Test → Analyze → Improve.*
 
-Static HTML/CSS/JS, no framework and no build step. Hosted on **Cloudflare Pages**.
+Static HTML/CSS/JS, no framework and no build step. Hosted on **Cloudflare Workers** (static assets), deployed by Workers Builds.
 
 ## Structure
 
@@ -21,7 +21,7 @@ public/                          ← everything that is published
   _headers                       Security headers, CSP, caching (Cloudflare)
   robots.txt  sitemap.xml  site.webmanifest  .well-known/security.txt
 scripts/                         Quality checks (used by CI)
-wrangler.jsonc                   Cloudflare Pages config (output dir = public)
+wrangler.jsonc                   Cloudflare Workers config (assets = ./public, custom 404)
 .github/                         CI workflow + Dependabot
 ```
 
@@ -29,17 +29,18 @@ wrangler.jsonc                   Cloudflare Pages config (output dir = public)
 
 ```bash
 npm install          # once
-npm run dev          # http://localhost:8788
+npm run dev          # local Cloudflare runtime incl. _headers → http://localhost:8787
 npm run check        # HTML validation + JS syntax + internal link check
 ```
 
 ## Deployment
 
-Every push to `main` deploys to production automatically via the Cloudflare Pages Git integration.
-Other branches and pull requests get a private preview URL (`<branch>.<project>.pages.dev`, not indexed).
+Cloudflare **Workers Builds** is connected to this repo (Worker name: `creator-signals`).
+Every push to `main` runs `npx wrangler deploy` and goes live automatically; the GitHub commit gets a
+"Workers Builds" check showing the result. Pull requests get a preview version.
 
-Cloudflare Pages settings: Framework preset **None** · Build command **empty** · Output directory **public**
-(`wrangler.jsonc` also sets `pages_build_output_dir` to `./public`).
+Cloudflare build settings: Build command **empty** · Deploy command **`npx wrangler deploy`** · Root directory **`/`**.
+`npm run deploy:dry` validates the config locally without deploying.
 
 ## Working on the site
 
