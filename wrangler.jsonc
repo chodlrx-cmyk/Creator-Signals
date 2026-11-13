@@ -10,5 +10,13 @@
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
+  // Custom domains are managed here so the config stays the source of truth.
+  // (www → apex redirect and "Always Use HTTPS" are zone settings in the dashboard.)
+  "routes": [
+    { "pattern": "creatorsignals.blog", "custom_domain": true },
+    { "pattern": "www.creatorsignals.blog", "custom_domain": true }
+  ],
+  "workers_dev": true,
+  "preview_urls": true,
   "observability": { "enabled": true }
 }

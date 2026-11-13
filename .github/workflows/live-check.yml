@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: [".github/workflows/live-check.yml"]
+    paths: [".github/workflows/live-check.yml", "wrangler.jsonc", "public/_headers"]
 
 permissions:
   contents: read
@@ -44,3 +44,9 @@ jobs:
             echo "$h" | grep -qi "^$k:" || { echo "::error::Missing header $k"; exit 1; }
           done
           echo "Production OK"
+      - name: Redirects (www → apex, http → https)
+        run: |
+          w=$(curl -s -o /dev/null -m 20 -w "%{http_code} %{redirect_url}" "https://www.$DOMAIN/some/path")
+          case "$w" in 301*"https://$DOMAIN/some/path"|308*"https://$DOMAIN/some/path") echo "www redirect OK";; *) echo "::warning::www.$DOMAIN does not 301 to the apex ($w)";; esac
+          h=$(curl -s -o /dev/null -m 20 -w "%{http_code} %{redirect_url}" "http://$DOMAIN/")
+          case "$h" in 30[1278]*"https://$DOMAIN/") echo "HTTPS redirect OK";; *) echo "::warning::http://$DOMAIN does not redirect to https ($h)";; esac
