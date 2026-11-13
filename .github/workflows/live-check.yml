@@ -25,6 +25,8 @@ jobs:
           for q in "NS $DOMAIN" "SOA $DOMAIN" "A $DOMAIN" "AAAA $DOMAIN" "CNAME www.$DOMAIN" "A www.$DOMAIN" "MX $DOMAIN" "TXT $DOMAIN"; do
             set -- $q; echo "== $1 $2: $(dig +short @1.1.1.1 $2 $1 | tr '\n' ' ')"
           done
+          echo "== DS $DOMAIN: $(dig +short @1.1.1.1 DS $DOMAIN | tr '\n' ' ')"
+          if dig @1.1.1.1 +dnssec $DOMAIN A | grep -q "flags:.* ad"; then echo "== DNSSEC: validated (AD flag)"; else echo "== DNSSEC: not active"; fi
           echo "== whois (nameservers / status)"
           whois "$DOMAIN" 2>/dev/null | grep -iE "^ *(registrar:|name server|domain status|creation date|registry expiry)" | head -20 || true
       - name: HTTP
