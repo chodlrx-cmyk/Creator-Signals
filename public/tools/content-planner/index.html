@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30-Day Content Planner — free tool · Creator Signals</title>
+<meta name="description" content="Free 30-day content planner for TikTok creators: plan ideas and hooks, track status and results, run weekly reviews and export to CSV.">
+<meta name="theme-color" content="#0B0B0F">
+<link rel="canonical" href="https://creatorsignals.blog/tools/content-planner/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Creator Signals">
+<meta property="og:title" content="30-Day Content Planner — free tool · Creator Signals">
+<meta property="og:description" content="Free 30-day content planner for TikTok creators: plan ideas and hooks, track status and results, run weekly reviews and export to CSV.">
+<meta property="og:url" content="https://creatorsignals.blog/tools/content-planner/">
+<meta property="og:image" content="https://creatorsignals.blog/assets/img/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/pjs-800.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/style.css">
+<script src="/assets/js/main.js" defer></script>
+<script src="/assets/js/planner.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site">
+  <div class="wrap nav">
+    <a href="/" class="brand" aria-label="Creator Signals — home">
+      <img src="/assets/img/cs-mark.png" alt="" width="48" height="30">
+      <span>Creator Signals<small>LEARN · GROW · EARN</small></span>
+    </a>
+    <nav aria-label="Main">
+      <ul id="menu"><li><a href="/academy/">Academy</a></li><li><a href="/tools/">Free tools</a></li><li><a href="/tools/content-planner/" aria-current="page">Planner</a></li><li><a href="/blog/">Lab &amp; blog</a></li><li class="mobile-only"><a class="btn btn-dark" href="/tools/">Try the free tools →</a></li></ul>
+    </nav>
+    <div class="nav-cta">
+      <a href="/tools/" class="btn btn-dark btn-sm">Free tools</a>
+      <button class="menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<main id="main">
+<div class="page-hero" style="padding-bottom:28px">
+  <div class="wrap">
+    <p class="crumbs"><a href="/">Home</a> / <a href="/tools/">Free tools</a> / Content Planner</p>
+    <span class="chip">Free tool · 30 days</span>
+    <h1>30-Day <span class="grad-text">Content Planner</span></h1>
+    <p class="lead">Plan ideas and hooks, mark videos as published, log your results and review each week. Your data stays in this browser — export a backup any time.</p>
+  </div>
+</div>
+<section style="padding-top:20px">
+  <div class="wrap">
+    <noscript><p class="notice">The planner needs JavaScript to work.</p></noscript>
+    <div class="planner-bar">
+      <div class="field"><label for="startDate">Day 1 starts on</label><input type="date" id="startDate"></div>
+      <div class="actions">
+        <button type="button" class="btn btn-xs" id="exportCsv">⬇ Export CSV</button>
+        <button type="button" class="btn btn-xs" id="exportJson">⬇ Backup</button>
+        <label class="btn btn-xs" style="cursor:pointer">⬆ Restore backup<input type="file" id="importJson" accept="application/json,.json" class="sr-only"></label>
+        <button type="button" class="btn btn-xs" id="resetAll">Reset</button>
+      </div>
+    </div>
+    <div class="stats" aria-live="polite">
+      <div class="stat"><span>Published</span><b id="stPub">0 / 30</b></div>
+      <div class="stat"><span>Planned</span><b id="stPlan">0</b></div>
+      <div class="stat"><span>Total views</span><b id="stViews">0</b></div>
+      <div class="stat"><span>Hooks tested</span><b id="stHooks">0</b></div>
+    </div>
+    <div class="cal" id="cal"></div>
+    <p class="hint" style="margin-top:14px"><span id="saveState" role="status"></span> · Data is stored only on this device and is not sent to Creator Signals.</p>
+
+    <div class="inbox" id="inbox" hidden>
+      <h2 style="font-size:20px">⚡ Hook inbox <span class="tag tag-violet" id="inboxCount">0</span></h2>
+      <p class="hint">Hooks you sent from the Hook Builder. Assign them to a day.</p>
+      <ul id="inboxList"></ul>
+    </div>
+  </div>
+</section>
+
+<dialog id="dayDlg" aria-labelledby="dayTitle">
+  <form id="dayForm" class="dlg" novalidate autocomplete="off">
+    <div class="dlg-head"><h2 id="dayTitle">Day</h2><button type="button" class="x-btn" data-close aria-label="Close">✕</button></div>
+    <div class="field"><label for="fIdea">Content idea</label><input type="text" id="fIdea" name="idea" maxlength="300" placeholder="What is this video about?"></div>
+    <div class="field"><label for="fHook">Hook</label><input type="text" id="fHook" name="hook" maxlength="300" placeholder="Your opening line"></div>
+    <div class="g2">
+      <div class="field"><label for="fCat">Category</label><select id="fCat" name="cat"><option value="">—</option><option>Educational</option><option>Story</option><option>Opinion</option><option>Tips / list</option><option>Behind the scenes</option><option>Trend</option><option>Other</option></select></div>
+      <div class="field"><label for="fStatus">Status</label><select id="fStatus" name="status"><option value="idea">Idea</option><option value="planned">Planned</option><option value="published">Published</option></select></div>
+    </div>
+    <div class="field"><label for="fLink">Video link</label><input id="fLink" name="link" type="url" maxlength="300" placeholder="https://www.tiktok.com/@…"><span class="err" id="linkErr" aria-live="polite"></span></div>
+    <p class="sub">Results (after publishing)</p>
+    <div class="g2">
+      <div class="field"><label for="fViews">Views</label><input type="text" id="fViews" name="views" inputmode="numeric"></div>
+      <div class="field"><label for="fLikes">Likes</label><input type="text" id="fLikes" name="likes" inputmode="numeric"></div>
+      <div class="field"><label for="fComments">Comments</label><input type="text" id="fComments" name="comments" inputmode="numeric"></div>
+      <div class="field"><label for="fShares">Shares</label><input type="text" id="fShares" name="shares" inputmode="numeric"></div>
+    </div>
+    <span class="err" id="numErr" aria-live="polite"></span>
+    <div class="field"><label for="fNotes">Notes &amp; evaluation</label><textarea id="fNotes" name="notes" maxlength="1000" placeholder="What did you test? What did you learn?"></textarea></div>
+    <div class="dlg-foot"><button type="button" class="btn btn-xs" id="dayClear">Clear day</button><span class="actions"><button type="button" class="btn btn-ghost btn-sm" data-close>Cancel</button><button type="submit" class="btn btn-dark btn-sm">Save</button></span></div>
+  </form>
+</dialog>
+
+<dialog id="revDlg" aria-labelledby="revTitle">
+  <form id="revForm" class="dlg" autocomplete="off">
+    <div class="dlg-head"><h2 id="revTitle">Weekly review</h2><button type="button" class="x-btn" data-close aria-label="Close">✕</button></div>
+    <div class="rv-stats">
+      <div class="stat"><span>Published</span><b id="rvPub">0</b></div>
+      <div class="stat"><span>Total views</span><b id="rvViews">0</b></div>
+      <div class="stat"><span>Hooks tested</span><b id="rvHooks">0</b></div>
+      <div class="stat"><span>Most viewed</span><p id="rvBest" style="font-weight:700;font-size:14px;margin-top:4px"></p></div>
+    </div>
+    <div class="field"><label for="rWorked">What worked?</label><textarea id="rWorked" name="worked" maxlength="1000"></textarea></div>
+    <div class="field"><label for="rDidnt">What didn't work?</label><textarea id="rDidnt" name="didnt" maxlength="1000"></textarea></div>
+    <div class="field"><label for="rNext">What will you test next week?</label><textarea id="rNext" name="next" maxlength="1000"></textarea></div>
+    <p class="hint">Small numbers vary a lot. Look for patterns over several videos, not single results.</p>
+    <div class="dlg-foot"><span></span><span class="actions"><button type="button" class="btn btn-ghost btn-sm" data-close>Close</button><button type="submit" class="btn btn-dark btn-sm">Save review</button></span></div>
+  </form>
+</dialog>
+</main>
+<footer class="site">
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a href="/" class="brand"><img src="/assets/img/cs-mark.png" alt="" width="48" height="30"><span>Creator Signals<small>LEARN · GROW · EARN</small></span></a>
+        <p>Learn smarter. Create better. Grow with purpose. Practical education for beginner and growing creators.</p>
+      </div>
+      <div><h2>Academy</h2><ul><li><a href="/academy/">Programs</a></li><li><a href="/academy/#launchpad">30-Day Launchpad</a></li><li><a href="/academy/launchpad/day-8-hooks/">Free sample lesson</a></li></ul></div>
+      <div><h2>Free tools</h2><ul><li><a href="/tools/#hook-builder">Hook Builder</a></li><li><a href="/tools/#engagement">Engagement Calculator</a></li><li><a href="/tools/content-planner/">Content Planner</a></li></ul></div>
+      <div><h2>Follow</h2><ul><li><a href="https://www.tiktok.com/@creatorsignals" target="_blank" rel="noopener">TikTok · @creatorsignals</a></li><li><a href="/blog/">Lab &amp; blog</a></li><li><a href="/#faq">FAQ</a></li></ul></div>
+    </div>
+    <div class="legal">
+      <span>© <span id="yr">2026</span> Creator Signals · Independent educational platform, not affiliated with or endorsed by TikTok.</span>
+      <span><a href="/privacy/">Privacy</a> · <a href="/terms/">Terms</a></span>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

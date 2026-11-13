@@ -1,0 +1,17 @@
+{
+  "name": "creator-signals",
+  "private": true,
+  "description": "Creator Signals — static website for creatorsignals.blog (Cloudflare Pages).",
+  "license": "UNLICENSED",
+  "scripts": {
+    "check": "npm run check:html && npm run check:js && npm run check:links",
+    "check:html": "html-validate \"public/**/*.html\"",
+    "check:js": "node scripts/check-js.mjs",
+    "check:links": "node scripts/check-links.mjs",
+    "dev": "npx --yes serve public -l 8788"
+  },
+  "devDependencies": {
+    "html-validate": "^9.0.0"
+  },
+  "engines": { "node": ">=20" }
+}

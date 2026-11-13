@@ -1,0 +1,9 @@
+// Cloudflare Pages configuration.
+// `pages_build_output_dir` makes Pages publish the ./public folder,
+// so the dashboard's "build output directory" setting is overridden by this file.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "creator-signals",
+  "compatibility_date": "2026-11-01",
+  "pages_build_output_dir": "./public"
+}

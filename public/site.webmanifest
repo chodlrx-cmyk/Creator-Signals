@@ -1,0 +1,9 @@
+{
+  "name": "Creator Signals",
+  "short_name": "Creator Signals",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0B0B0F",
+  "icons": [{ "src": "/assets/img/icon-512.png", "sizes": "512x512", "type": "image/png" }]
+}
