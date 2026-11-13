@@ -56,6 +56,15 @@ Notes:
   that were never sold at that price.
 - Never put personal data in the HTML or JS.
 
+## Language & region
+
+- Creator Signals is an **international** learning platform. All copy is written in **British English**
+  (analyse, optimise, programme, colour). CSS class names and code stay as they are.
+- The method is always written as **Learn → Create → Test → Analyse → Improve**.
+- TikTok features are verified with a **UK account** (primary test region). Every page footer carries
+  the line *"Built for creators worldwide · TikTok features checked with a UK account"*.
+- Prices are not converted to a currency until the payment platform is set up.
+
 ## Before public launch
 
 - [ ] Create `hello@creatorsignals.blog` (Cloudflare Email Routing) — used on Privacy, Terms, security.txt
