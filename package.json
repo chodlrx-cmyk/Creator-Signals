@@ -1,16 +1,17 @@
 {
   "name": "creator-signals",
   "private": true,
-  "description": "Creator Signals — static website for creatorsignals.blog (Cloudflare Workers static assets).",
+  "description": "Creator Signals \u2014 static website for creatorsignals.blog (Cloudflare Workers static assets).",
   "license": "UNLICENSED",
   "scripts": {
-    "check": "npm run check:html && npm run check:js && npm run check:links",
+    "check": "npm run check:html && npm run check:js && npm run check:links && npm run check:launch",
     "check:html": "html-validate \"public/**/*.html\"",
     "check:js": "node scripts/check-js.mjs",
     "check:links": "node scripts/check-links.mjs",
     "dev": "wrangler dev",
     "deploy:dry": "wrangler deploy --dry-run",
-    "build:starter-kit": "node scripts/build-starter-kit.mjs"
+    "build:starter-kit": "node scripts/build-starter-kit.mjs",
+    "check:launch": "node scripts/check-launch.mjs"
   },
   "devDependencies": {
     "html-validate": "^11.21.0",
