@@ -31,3 +31,5 @@ jobs:
         run: npm run check:js
       - name: Check internal links & anchors
         run: npm run check:links
+      - name: Launch guard (seller details present)
+        run: npm run check:launch
