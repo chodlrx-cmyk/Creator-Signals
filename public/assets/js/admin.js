@@ -35,6 +35,11 @@
     return fetch("/api/admin" + path + sep + "range=" + state.range, Object.assign({ credentials: "same-origin", headers: { accept: "application/json" } }, opts || {}))
       .then(function (r) {
         if (r.status === 403) throw new Error("Access denied — sign in again through Cloudflare Access.");
+        if (r.status === 503) return r.json().catch(function () { return {}; }).then(function (d) {
+          throw new Error(d && d.error === "db_limit"
+            ? "Cloudflare's free daily database read limit is used up for this account (shared with other projects). Nothing is lost; the dashboard works again after 00:00 UTC (01:00 Amsterdam time)."
+            : "Server error (503)");
+        });
         if (!r.ok) throw new Error("Server error (" + r.status + ")");
         return r.json();
       });

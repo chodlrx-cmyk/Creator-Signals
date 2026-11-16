@@ -47,6 +47,8 @@ export default {
       return env.ASSETS.fetch(request);
     } catch (err) {
       console.error("worker_error", p, err && err.stack ? err.stack : String(err));
+      // Cloudflare D1 free plan: the daily row-read limit is shared by every database on the account.
+      if (/row read limit|exceeded D1|D1_ERROR.*limit|code 7500/i.test(String(err && err.message))) return json({ error: "db_limit" }, 503);
       return json({ error: "server_error" }, 500);
     }
   },
