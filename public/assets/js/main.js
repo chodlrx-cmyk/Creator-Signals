@@ -90,7 +90,7 @@
     var nav = window.navigator || {};
     if (nav.globalPrivacyControl === true || nav.doNotTrack === "1" || window.doNotTrack === "1") return;
     if (location.pathname.indexOf("/admin") === 0) return;
-    var PRODUCTS = { dmuVE: "starter-kit", juEVT: "launchpad" };
+    var PRODUCTS = { dmuVE: "starter-kit", juEVT: "launchpad", UFPpd: "accelerator", G7Xqk: "bundle" };
     var q = new URLSearchParams(location.search);
     var utm = { s: q.get("utm_source") || undefined, m: q.get("utm_medium") || undefined, c: q.get("utm_campaign") || undefined };
     function send(kind, product) {
@@ -112,4 +112,26 @@
       if (tagged) send("cta", tagged);
     }, true);
   })();
+})();
+
+/* ---------- Black Friday 2026: live countdown; offer elements disappear after the deadline ---------- */
+(function () {
+  var els = document.querySelectorAll("[data-bf-end]");
+  if (!els.length) return;
+  var counters = document.querySelectorAll("[data-bf-count]");
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function tick() {
+    var now = Date.now(), live = false;
+    els.forEach(function (el) {
+      var end = Date.parse(el.getAttribute("data-bf-end"));
+      if (isNaN(end) || now >= end) el.hidden = true; else live = true;
+    });
+    if (!live) return clearInterval(timer);
+    var left = Math.max(0, Date.parse(els[0].getAttribute("data-bf-end")) - now);
+    var d = Math.floor(left / 864e5), h = Math.floor(left / 36e5) % 24, m = Math.floor(left / 6e4) % 60, s = Math.floor(left / 1e3) % 60;
+    var txt = (d ? d + "d " : "") + pad(h) + "h " + pad(m) + "m " + pad(s) + "s left";
+    counters.forEach(function (c) { c.textContent = txt; });
+  }
+  var timer = setInterval(tick, 1000);
+  tick();
 })();
