@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Admin · Creator Signals</title>
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
+<link rel="stylesheet" href="/assets/css/admin.css">
+<script src="/assets/js/admin.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><img src="/assets/img/cs-mark-white.png" alt="" width="22" height="22"><b>CREATOR SIGNALS</b><span class="slash">/</span><span>ADMIN</span></div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-tab="overview" aria-current="page">Overview</button>
+      <button type="button" data-tab="traffic">Traffic</button>
+      <button type="button" data-tab="products">Products</button>
+      <button type="button" data-tab="orders">Orders</button>
+      <button type="button" data-tab="campaigns">Campaigns</button>
+      <button type="button" data-tab="settings">Settings</button>
+    </nav>
+    <div class="range" role="group" aria-label="Date range">
+      <button type="button" data-range="7d">7D</button>
+      <button type="button" data-range="30d" class="on">30D</button>
+      <button type="button" data-range="90d">90D</button>
+      <button type="button" data-range="all">All</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="banner" class="banner" hidden></div>
+
+  <!-- OVERVIEW -->
+  <section id="tab-overview" class="tab">
+    <div class="head"><h1>Overview</h1><p class="sub" id="ov-sub">—</p></div>
+    <div class="kpis">
+      <div class="kpi"><span>Page views</span><b id="k-views">—</b><small>Own cookieless count; no unique visitors</small></div>
+      <div class="kpi"><span>Product clicks</span><b id="k-clicks">—</b><small>Clicks on product buttons</small></div>
+      <div class="kpi"><span>Free downloads</span><b id="k-downloads">—</b><small id="k-downloads-note">Download clicks · confirmed free orders</small></div>
+      <div class="kpi"><span>Paid orders</span><b id="k-orders">—</b><small>Confirmed by Payhip, excl. tests</small></div>
+      <div class="kpi"><span>Net revenue</span><b id="k-net">—</b><small id="k-net-note">Incl. VAT where applied, after refunds</small></div>
+      <div class="kpi"><span>Orders per paid-product click</span><b id="k-conv">—</b><small>Not a full funnel (see note)</small></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-h"><h2>Daily activity</h2><div class="legend"><i class="l-views"></i>Views <i class="l-clicks"></i>Clicks <i class="l-orders"></i>Orders</div></div><div id="chart" class="chart" role="img" aria-label="Daily views, clicks and orders"></div></div>
+      <div class="card"><div class="card-h"><h2>Sync status</h2></div><ul class="health" id="health"></ul></div>
+    </div>
+    <div class="card"><div class="card-h"><h2>Recent orders</h2><button type="button" class="link" data-goto="orders">All orders →</button></div><div id="recent"></div></div>
+    <p class="note">Figures come only from this site's own counts and from signed Payhip webhooks received after the dashboard went live. A dash (—) means no data yet, never zero by assumption. Checkout starts are only visible in Payhip's own analytics.</p>
+  </section>
+
+  <!-- TRAFFIC -->
+  <section id="tab-traffic" class="tab" hidden>
+    <div class="head"><h1>Traffic</h1><a class="btn" id="csv-events" href="/api/admin/events.csv?range=30d">Export events (CSV)</a></div>
+    <div class="grid2">
+      <div class="card"><div class="card-h"><h2>Top pages</h2></div><div id="t-pages"></div></div>
+      <div class="card"><div class="card-h"><h2>Sources</h2></div><div id="t-sources"></div></div>
+      <div class="card"><div class="card-h"><h2>Countries</h2></div><div id="t-countries"></div></div>
+      <div class="card"><div class="card-h"><h2>Devices</h2></div><div id="t-devices"></div></div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section id="tab-products" class="tab" hidden>
+    <div class="head"><h1>Products</h1></div>
+    <div class="card"><div id="p-table"></div></div>
+    <p class="note" id="p-note"></p>
+  </section>
+
+  <!-- ORDERS -->
+  <section id="tab-orders" class="tab" hidden>
+    <div class="head"><h1>Orders</h1><a class="btn" id="csv-orders" href="/api/admin/orders?format=csv&amp;range=30d">Export orders (CSV)</a></div>
+    <div class="filters">
+      <input type="search" id="o-q" placeholder="Search order ID or product" aria-label="Search orders">
+      <select id="o-status" aria-label="Status"><option value="">All statuses</option><option value="paid">Paid</option><option value="free">Free</option><option value="partial">Partly refunded</option><option value="refunded">Refunded</option><option value="test">Test</option></select>
+      <select id="o-size" aria-label="Rows per page"><option value="10">10 rows</option><option value="20">20 rows</option></select>
+    </div>
+    <div class="card"><div id="o-table"></div><div class="pager" id="o-pager"></div></div>
+  </section>
+
+  <!-- CAMPAIGNS -->
+  <section id="tab-campaigns" class="tab" hidden>
+    <div class="head"><h1>Campaigns</h1></div>
+    <div class="card"><div id="c-table"></div><div class="pager" id="c-pager"></div></div>
+    <p class="note">Sources come from <code>utm_source</code> / <code>utm_medium</code> / <code>utm_campaign</code> on the link, otherwise from the referring site. Payhip does not pass campaign data, so purchases cannot be attributed to a campaign reliably — compare clicks per campaign with orders in the same period.</p>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="tab-settings" class="tab" hidden>
+    <div class="head"><h1>Settings &amp; sync</h1></div>
+    <div class="grid2">
+      <div class="card"><div class="card-h"><h2>Connections</h2></div><ul class="health" id="s-config"></ul></div>
+      <div class="card"><div class="card-h"><h2>Payhip product keys</h2></div><div id="s-products"></div><p class="note small">The key is the code in the Payhip link, e.g. payhip.com/b/<b>juEVT</b>. Orders are matched to products by this key.</p></div>
+    </div>
+    <div class="card"><div class="card-h"><h2>Webhook deliveries</h2></div><div id="s-log"></div><div class="pager" id="s-pager"></div></div>
+  </section>
+</main>
+<footer class="foot"><span id="who">—</span> · Times in Europe/Amsterdam · No personal data is stored in this dashboard</footer>
+</body>
+</html>

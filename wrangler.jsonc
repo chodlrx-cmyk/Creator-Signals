@@ -5,8 +5,13 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "creator-signals",
   "compatibility_date": "2026-11-01",
+  // Worker: cookieless measurement, Payhip webhook and the Access-protected admin area (src/worker.js).
+  "main": "src/worker.js",
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
+    // The Worker runs first only for these paths; all other requests are served straight from ./public.
+    "run_worker_first": ["/admin", "/admin/*", "/api/*"],
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page"
   },
@@ -18,5 +23,17 @@
   ],
   "workers_dev": true,
   "preview_urls": true,
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // Admin data (no e-mail or IP addresses are stored). Schema: migrations/.
+  "d1_databases": [
+    { "binding": "DB", "database_name": "creator-signals-admin", "database_id": "f17d2d9c-dd11-47f9-a74f-c3303d635bf9", "migrations_dir": "migrations" }
+  ],
+  // Cloudflare Access (Zero Trust) application that protects /admin and /api/admin.
+  // Fill in after creating the Access application; until then the admin area stays closed (fail closed).
+  // Secret (not here): PAYHIP_API_KEY  →  npx wrangler secret put PAYHIP_API_KEY
+  "vars": {
+    "ACCESS_TEAM": "",
+    "ACCESS_AUD": "",
+    "ADMIN_EMAILS": ""
+  }
 }

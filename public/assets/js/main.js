@@ -82,4 +82,34 @@
       }).finally(function () { btn.disabled = false; });
     });
   }
+  /* ---------- Cookieless measurement ----------
+     Counts page views and clicks on product / download buttons for our own dashboard.
+     No cookies, no local storage, no identifiers; nothing is sent when the browser signals
+     Global Privacy Control or Do Not Track. See /privacy/. */
+  (function () {
+    var nav = window.navigator || {};
+    if (nav.globalPrivacyControl === true || nav.doNotTrack === "1" || window.doNotTrack === "1") return;
+    if (location.pathname.indexOf("/admin") === 0) return;
+    var PRODUCTS = { dmuVE: "starter-kit", juEVT: "launchpad" };
+    var q = new URLSearchParams(location.search);
+    var utm = { s: q.get("utm_source") || undefined, m: q.get("utm_medium") || undefined, c: q.get("utm_campaign") || undefined };
+    function send(kind, product) {
+      var body = JSON.stringify({ k: kind, p: location.pathname, pr: product, r: document.referrer || "", u: utm });
+      try {
+        if (nav.sendBeacon && nav.sendBeacon("/api/e", new Blob([body], { type: "application/json" }))) return;
+      } catch (e) {}
+      try { fetch("/api/e", { method: "POST", body: body, headers: { "content-type": "application/json" }, keepalive: true }); } catch (e) {}
+    }
+    send("view");
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest("a[href]");
+      if (!a) return;
+      var tagged = a.getAttribute("data-product");
+      var href = a.getAttribute("href") || "";
+      var m = href.match(/^https:\/\/payhip\.com\/b\/([A-Za-z0-9]+)/);
+      if (m && (PRODUCTS[m[1]] || tagged)) return send("cta", tagged || PRODUCTS[m[1]]);
+      if (/^\/downloads\/creator-starter-kit\.pdf/.test(href)) return send("download", "starter-kit");
+      if (tagged) send("cta", tagged);
+    }, true);
+  })();
 })();

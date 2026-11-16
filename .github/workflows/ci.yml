@@ -33,3 +33,5 @@ jobs:
         run: npm run check:links
       - name: Launch guard (seller details present)
         run: npm run check:launch
+      - name: Worker tests (measurement, Payhip webhook, admin access)
+        run: npm run test:worker

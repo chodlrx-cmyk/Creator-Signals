@@ -16,6 +16,7 @@ for (const f of files) {
   const html = readFileSync(f, "utf8");
   for (const [, url] of html.matchAll(/\s(?:href|src)="([^"]+)"/g)) {
     if (/^(https?:|mailto:|data:)/.test(url)) continue;
+    if (url.startsWith("/api/")) continue; // dynamic Worker routes (src/worker.js), not static files
     if (url === "#") { console.error(`${f}: placeholder link "#"`); bad++; continue; }
     const [path, hash] = url.split("#");
     const target = path ? (path.startsWith("/") ? resolve(path) : null) : f;
