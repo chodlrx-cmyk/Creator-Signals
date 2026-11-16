@@ -31,9 +31,11 @@
   // Cloudflare Access (Zero Trust) application that protects /admin and /api/admin.
   // Fill in after creating the Access application; until then the admin area stays closed (fail closed).
   // Secret (not here): PAYHIP_API_KEY  →  npx wrangler secret put PAYHIP_API_KEY
+  // Cloudflare Access app "Creator Signals Admin" (covers /admin and /api/admin).
+  // Neither value is secret: the AUD tag is in every Access token. The optional ADMIN_EMAILS
+  // allow-list is NOT kept here (public repo): set it as a Worker *secret* in the dashboard.
   "vars": {
-    "ACCESS_TEAM": "",
-    "ACCESS_AUD": "",
-    "ADMIN_EMAILS": ""
+    "ACCESS_TEAM": "yellow-hall-123e.cloudflareaccess.com",
+    "ACCESS_AUD": "efb92dc84183cf118a18fc2c5cb4c46cdedc875c01f895baa8a831d4d3255617"
   }
 }

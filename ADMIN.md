@@ -26,7 +26,8 @@ The dashboard says so where it matters and never fills gaps with estimates.
    - Domains: `creatorsignals.blog/admin` and `creatorsignals.blog/api/admin`.
    - Policy: *Allow* only your own e-mail address, with one-time PIN or your identity provider (2FA).
    - Copy the **team domain** (`<team>.cloudflareaccess.com`) and the **Application Audience (AUD) tag** into `wrangler.jsonc` → `vars.ACCESS_TEAM` / `vars.ACCESS_AUD`.
-   - Put your e-mail address in `ADMIN_EMAILS`.
+   - Optional extra check: add `ADMIN_EMAILS` as a Worker **secret** (Cloudflare dashboard → Worker → Settings → Variables → *Secret*), never in this public repo.
+   - Done 16 Nov 2026: app *Creator Signals Admin*, team `yellow-hall-123e.cloudflareaccess.com`, policy allows one e-mail address (one-time PIN).
    - Until these are set, `/admin` answers 403 (fail closed).
    - The Worker check also protects the `*.workers.dev` and preview URLs, which Access does not cover.
 2. **Payhip secret** — Payhip → Settings → Developer → API key:
