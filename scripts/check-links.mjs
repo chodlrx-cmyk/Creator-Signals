@@ -18,7 +18,7 @@ for (const f of files) {
     if (/^(https?:|mailto:|data:)/.test(url)) continue;
     if (url.startsWith("/api/")) continue; // dynamic Worker routes (src/worker.js), not static files
     if (url === "#") { console.error(`${f}: placeholder link "#"`); bad++; continue; }
-    const [path, hash] = url.split("#");
+    const [pathQ, hash] = url.split("#"); const path = pathQ.split("?")[0];
     const target = path ? (path.startsWith("/") ? resolve(path) : null) : f;
     if (path && !path.startsWith("/")) { console.error(`${f}: use root-relative paths: ${url}`); bad++; continue; }
     if (!target) { console.error(`${f}: missing ${url}`); bad++; continue; }
