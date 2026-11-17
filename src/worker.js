@@ -73,7 +73,8 @@ export function classifySource(ref, ownHost) {
   if (/(^|\.)(instagram\.com|l\.instagram\.com)$/.test(host)) return "instagram";
   if (/(^|\.)(youtube\.com|youtu\.be)$/.test(host)) return "youtube";
   if (/(^|\.)(facebook\.com|fb\.com)$/.test(host)) return "facebook";
-  if (/(^|\.)(bing\.com|duckduckgo\.com|ecosia\.org)$/.test(host)) return "search-other";
+  if (/(^|\.)bing\.com$/.test(host)) return "bing";
+  if (/(^|\.)(duckduckgo\.com|ecosia\.org)$/.test(host)) return "search-other";
   if (/(^|\.)payhip\.com$/.test(host)) return "payhip";
   return "other";
 }
@@ -87,6 +88,8 @@ async function collect(request, env, url, ctx) {
   const origin = request.headers.get("origin");
   if (origin && new URL(origin).host !== url.host) return text("forbidden", 403);
   if (BOT_RE.test(request.headers.get("user-agent") || "")) return new Response(null, { status: 204 });
+  // The owner's own browser: a Cloudflare Access session cookie on this site means an admin is browsing. Not counted.
+  if (/(^|;\s*)CF_Authorization=/.test(request.headers.get("cookie") || "")) return new Response(null, { status: 204 });
   const raw = await request.text();
   if (raw.length > 2048) return text("too large", 413);
   let b;
@@ -285,6 +288,8 @@ function denied(path, reason) {
 /* Admin API                                                           */
 /* ------------------------------------------------------------------ */
 const RANGES = { "7d": 7, "30d": 30, "90d": 90, all: null };
+// Product-button clicks. Blog navigation clicks (product "to-starter-kit" etc.) are stored as cta too but are not checkout clicks.
+const BTN = "(kind='cta' AND COALESCE(product,'') NOT LIKE 'to-%')";
 
 export function rangeStart(range, todaySecs = now()) {
   const days = RANGES[range] === undefined ? 30 : RANGES[range];
@@ -348,12 +353,12 @@ async function adminApi(request, env, url, who) {
   if (p === "/me") return json({ email: who.email, tz: TZ });
 
   if (p === "/overview") {
-    const ev = await one(env, `SELECT SUM(kind='view') AS views, SUM(kind='cta') AS clicks, SUM(kind='download') AS downloads,
+    const ev = await one(env, `SELECT SUM(kind='view') AS views, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads,
       SUM(kind='cta' AND product IN (SELECT slug FROM products WHERE kind='paid')) AS paid_clicks FROM events WHERE day >= ?`, from);
     const tx = await one(env, `SELECT COUNT(*) AS orders, SUM(price) AS gross, SUM(refunded) AS refunds, SUM(net) AS net, MIN(currency) AS cur, COUNT(DISTINCT currency) AS ncur
       FROM (${TX_SQL} WHERE t.day >= ? AND t.is_test = 0 AND t.price > 0)`, from);
     const free = await one(env, `SELECT COUNT(*) AS n FROM transactions WHERE day >= ? AND is_test = 0 AND price = 0`, from);
-    const trend = await all(env, `SELECT day, SUM(kind='view') AS views, SUM(kind='cta') AS clicks, SUM(kind='download') AS downloads FROM events WHERE day >= ? GROUP BY day ORDER BY day`, from);
+    const trend = await all(env, `SELECT day, SUM(kind='view') AS views, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads FROM events WHERE day >= ? GROUP BY day ORDER BY day`, from);
     const txTrend = await all(env, `SELECT day, COUNT(*) AS orders, SUM(net) AS net FROM (${TX_SQL} WHERE t.day >= ? AND t.is_test = 0 AND t.price > 0) GROUP BY day ORDER BY day`, from);
     const recent = await all(env, `${TX_SQL} ORDER BY t.ts DESC LIMIT 5`);
     const pm = await productMap(env);
@@ -373,16 +378,16 @@ async function adminApi(request, env, url, who) {
   }
 
   if (p === "/traffic") {
-    const by = (col) => all(env, `SELECT COALESCE(${col}, '—') AS k, SUM(kind='view') AS views, SUM(kind='cta') AS clicks, SUM(kind='download') AS downloads
+    const by = (col) => all(env, `SELECT COALESCE(${col}, '—') AS k, SUM(kind='view') AS views, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads
       FROM events WHERE day >= ? GROUP BY 1 ORDER BY views DESC, clicks DESC LIMIT 50`, from);
     return json({ range, from,
-      daily: await all(env, `SELECT day, SUM(kind='view') AS views, SUM(kind='cta') AS clicks, SUM(kind='download') AS downloads FROM events WHERE day >= ? GROUP BY day ORDER BY day`, from),
+      daily: await all(env, `SELECT day, SUM(kind='view') AS views, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads FROM events WHERE day >= ? GROUP BY day ORDER BY day`, from),
       pages: await by("path"), sources: await by("source"), countries: await by("country"), devices: await by("device") });
   }
 
   if (p === "/products") {
     const pm = await productMap(env);
-    const ev = await all(env, `SELECT product, SUM(kind='cta') AS clicks, SUM(kind='download') AS downloads FROM events WHERE day >= ? AND product IS NOT NULL GROUP BY product`, from);
+    const ev = await all(env, `SELECT product, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads FROM events WHERE day >= ? AND product IS NOT NULL GROUP BY product`, from);
     const txs = await all(env, `${TX_SQL} WHERE t.day >= ? AND t.is_test = 0`, from);
     const out = pm.rows.map((r) => ({ slug: r.slug, name: r.name, kind: r.kind, payhip_key: r.payhip_key, clicks: 0, downloads: 0, orders: 0, free_orders: 0, gross: 0, refunds: 0, net: 0 }));
     const bySlug = Object.fromEntries(out.map((o) => [o.slug, o]));
@@ -423,9 +428,12 @@ async function adminApi(request, env, url, who) {
 
   if (p === "/campaigns") {
     return json({ range, from, rows: await all(env, `SELECT source, COALESCE(medium,'—') AS medium, COALESCE(campaign,'—') AS campaign,
-      SUM(kind='view') AS views, SUM(kind='cta') AS clicks, SUM(kind='download') AS downloads
+      SUM(kind='view') AS views, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads
       FROM events WHERE day >= ? GROUP BY source, medium, campaign ORDER BY views DESC, clicks DESC LIMIT 200`, from) });
   }
+
+  if (p === "/blog") return blogList(env, url);
+  if (p === "/blog/article") return blogArticle(env, url);
 
   if (p === "/health") {
     return json({ ...(await healthSummary(env)),
@@ -461,4 +469,157 @@ async function healthSummary(env) {
   const unmappedPaid = await one(env, "SELECT COUNT(*) AS n FROM products WHERE kind='paid' AND payhip_key IS NULL");
   return { last_webhook: last.t || null, webhook_failures_7d: fail.n || 0, last_event: lastEv.t || null,
     payhip_secret_set: !!env.PAYHIP_API_KEY, products_without_key: unmappedPaid.n || 0 };
+}
+
+/* ------------------------------------------------------------------ */
+/* Blog analytics (admin)                                              */
+/* ------------------------------------------------------------------ */
+// Definitions (also shown in the dashboard):
+//   Views          page-view events on the article path (cookieless; one per page load, bots and the owner's browser excluded).
+//   Unique readers not available: no identifiers are stored, so readers cannot be de-duplicated.
+//   Free Kit       clicks on links to /starter-kit/ on the article (+ any Starter Kit Payhip / PDF click on the article itself).
+//   30-Day/90-Day  clicks on links to /academy/launchpad/ or /academy/accelerator/ (+ any Payhip click for that course on the article).
+//   CTR            (Free Kit + 30-Day + 90-Day clicks) ÷ views, for the same period and source filter. Clicks are not sales.
+//   Orders/revenue not attributable: Payhip orders carry no link to a visit or article.
+const ART_RE = /^\/blog\/[a-z0-9-]{1,80}\/$/;
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const BLOG_SOURCES = ["google", "bing", "tiktok", "direct", "internal", "other"];
+const BLOG_SORT = ["title", "views", "google", "bing", "tiktok", "kit", "d30", "d90", "ctr", "last"];
+let blogCache = { at: 0, list: null };
+
+const decodeEnt = (t) => t.replace(/&amp;/g, "&").replace(/&#39;|&rsquo;|&#8217;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
+// The article list comes from the public /blog/ index (the source of truth for what is published); titles from each page's <title>.
+async function blogArticles(env, origin) {
+  if (blogCache.list && blogCache.list.length && now() - blogCache.at < 600) return blogCache.list;
+  const list = [];
+  try {
+    const idx = await env.ASSETS.fetch(new Request(origin + "/blog/"));
+    if (idx.ok) {
+      const html = await idx.text();
+      const paths = [...new Set([...html.matchAll(/href="(\/blog\/[a-z0-9-]{1,80}\/)"/g)].map((m) => m[1]))].slice(0, 200);
+      for (const path of paths) {
+        let title = path;
+        try {
+          const r = await env.ASSETS.fetch(new Request(origin + path));
+          if (r.ok) { const m = (await r.text()).match(/<title>([^<]{1,200})<\/title>/i); if (m) title = decodeEnt(m[1]).replace(/\s*[·|]\s*Creator Signals\s*$/, "").trim(); }
+        } catch { /* keep path as title */ }
+        list.push({ path, title });
+      }
+    }
+  } catch { /* fall back below */ }
+  blogCache = { at: now(), list };
+  return list;
+}
+
+const dayShift = (d, n) => new Date(Date.parse(d + "T12:00:00Z") + n * 86400000).toISOString().slice(0, 10);
+
+export function blogPeriod(sp, todaySecs = now()) {
+  const range = sp.get("range") || "30d";
+  const today = amsDay(todaySecs);
+  if (range === "custom") {
+    const from = sp.get("from") || "", to = sp.get("to") || "";
+    if (!DAY_RE.test(from) || !DAY_RE.test(to) || isNaN(Date.parse(from)) || isNaN(Date.parse(to)) || from > to) return { error: "bad_range" };
+    const days = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
+    if (days > 800) return { error: "range_too_long" };
+    return { range, from, to, days, prev: { from: dayShift(from, -days), to: dayShift(from, -1) } };
+  }
+  const days = RANGES[range] === undefined ? 30 : RANGES[range];
+  if (days == null) return { range: "all", from: "0000-00-00", to: today, days: null, prev: null };
+  const from = rangeStart(range, todaySecs);
+  return { range: RANGES[range] === undefined ? "30d" : range, from, to: today, days, prev: { from: dayShift(from, -days), to: dayShift(from, -1) } };
+}
+
+const BLOG_AGG = `SELECT path, source, SUM(kind='view') AS views,
+    SUM((kind='cta' AND product IN ('to-starter-kit','starter-kit')) OR (kind='download' AND product='starter-kit')) AS kit,
+    SUM(kind='cta' AND product IN ('to-launchpad','launchpad')) AS d30,
+    SUM(kind='cta' AND product IN ('to-accelerator','accelerator')) AS d90,
+    MAX(ts) AS last
+  FROM events WHERE day >= ? AND day <= ? AND path LIKE '/blog/%' AND source <> 'test'`;
+
+const srcBucket = (s) => (BLOG_SOURCES.includes(s) ? s : "other");
+
+function blogRows(articles, agg, source) {
+  const by = Object.fromEntries(articles.map((a) => [a.path, { path: a.path, title: a.title, views: 0, google: 0, bing: 0, tiktok: 0, kit: 0, d30: 0, d90: 0, last: null }]));
+  agg.forEach((r) => {
+    const o = by[r.path];
+    if (!o) return; // the /blog/ index itself, removed pages, typos
+    if (source && srcBucket(r.source) !== source) return;
+    o.views += r.views || 0; o.kit += r.kit || 0; o.d30 += r.d30 || 0; o.d90 += r.d90 || 0;
+    if (r.source === "google" || r.source === "bing" || r.source === "tiktok") o[r.source] += r.views || 0;
+    if (r.last && (!o.last || r.last > o.last)) o.last = r.last;
+  });
+  return Object.values(by).map((o) => ({ ...o, clicks: o.kit + o.d30 + o.d90, ctr: o.views ? (o.kit + o.d30 + o.d90) / o.views : null }));
+}
+
+function blogTotals(rows) {
+  const t = rows.reduce((a, r) => ({ views: a.views + r.views, kit: a.kit + r.kit, d30: a.d30 + r.d30, d90: a.d90 + r.d90 }), { views: 0, kit: 0, d30: 0, d90: 0 });
+  return { ...t, course: t.d30 + t.d90, clicks: t.kit + t.d30 + t.d90, ctr: t.views ? (t.kit + t.d30 + t.d90) / t.views : null, unique_readers: null };
+}
+
+async function blogList(env, url) {
+  const sp = url.searchParams;
+  const per = blogPeriod(sp);
+  if (per.error) return json({ error: per.error }, 400);
+  const source = BLOG_SOURCES.includes(sp.get("source")) ? sp.get("source") : "";
+  const q = (sp.get("q") || "").trim().toLowerCase().slice(0, 80);
+  const sort = BLOG_SORT.includes(sp.get("sort")) ? sp.get("sort") : "views";
+  const dir = sp.get("dir") === "asc" ? 1 : -1;
+  const size = 10;
+  const agg = await all(env, `${BLOG_AGG} GROUP BY path, source LIMIT 5000`, per.from, per.to);
+  let articles = await blogArticles(env, url.origin);
+  if (!articles.length) articles = [...new Set(agg.map((r) => r.path).filter((x) => ART_RE.test(x)))].map((x) => ({ path: x, title: x }));
+  let rows = blogRows(articles, agg, source);
+  const kpi = blogTotals(rows);
+  let prev = null;
+  if (per.prev) prev = blogTotals(blogRows(articles, await all(env, `${BLOG_AGG} GROUP BY path, source LIMIT 5000`, per.prev.from, per.prev.to), source));
+  if (q) rows = rows.filter((r) => r.title.toLowerCase().includes(q) || r.path.includes(q));
+  rows.sort((a, b) => {
+    const x = a[sort], y = b[sort];
+    if (sort === "title") return dir * x.localeCompare(y);
+    if (x == null && y == null) return a.title.localeCompare(b.title);
+    if (x == null) return 1; if (y == null) return -1; // empty values always last
+    return dir * (x - y) || a.title.localeCompare(b.title);
+  });
+  if (sp.get("format") === "csv") {
+    const esc = (v) => { let t = String(v == null ? "" : v); if (/^[=+\-@]/.test(t)) t = "'" + t; return `"${t.replace(/"/g, '""')}"`; };
+    const lastDay = (t) => (t ? amsDay(t) : "");
+    const head = "article,url,views,google_views,bing_views,tiktok_views,free_kit_clicks,launchpad_30day_clicks,accelerator_90day_clicks,cta_clicks,ctr_percent,last_activity_day_amsterdam\n";
+    const body = rows.map((r) => [r.title, "https://" + url.host + r.path, r.views, r.google, r.bing, r.tiktok, r.kit, r.d30, r.d90, r.clicks,
+      r.ctr == null ? "" : (r.ctr * 100).toFixed(1), lastDay(r.last)].map(esc).join(",")).join("\n");
+    return new Response(head + body + "\n", { headers: { "content-type": "text/csv; charset=utf-8", "cache-control": "no-store",
+      "content-disposition": `attachment; filename="creator-signals-blog-${per.range === "custom" ? per.from + "_" + per.to : per.range}.csv"` } });
+  }
+  const total = rows.length, pages = Math.max(1, Math.ceil(total / size));
+  const page = Math.min(pages, Math.max(1, Math.floor(Number(sp.get("page"))) || 1));
+  return json({ range: per.range, from: per.from, to: per.to, prev_period: per.prev, source: source || "all", sort, dir: dir === 1 ? "asc" : "desc",
+    kpi, prev, page, size, total, pages, rows: rows.slice((page - 1) * size, page * size),
+    attribution: { orders: "not_attributable", revenue: "not_attributable", unique_readers: "not_available" } });
+}
+
+async function blogArticle(env, url) {
+  const sp = url.searchParams;
+  const path = sp.get("path") || "";
+  if (!ART_RE.test(path)) return json({ error: "bad_path" }, 400);
+  const per = blogPeriod(sp);
+  if (per.error) return json({ error: per.error }, 400);
+  const art = (await blogArticles(env, url.origin)).find((a) => a.path === path);
+  if (!art) return json({ error: "not_found" }, 404);
+  const source = BLOG_SOURCES.includes(sp.get("source")) ? sp.get("source") : "";
+  const agg = await all(env, `${BLOG_AGG} AND path = ? GROUP BY path, source LIMIT 100`, per.from, per.to, path);
+  const row = blogRows([art], agg, source)[0];
+  const sources = {};
+  agg.forEach((r) => { const k = srcBucket(r.source); sources[k] = (sources[k] || 0) + (r.views || 0); });
+  const daily = (await all(env, `SELECT day, source, SUM(kind='view') AS views,
+      SUM((kind='cta' AND product IN ('to-starter-kit','starter-kit','to-launchpad','launchpad','to-accelerator','accelerator')) OR (kind='download' AND product='starter-kit')) AS clicks
+    FROM events WHERE day >= ? AND day <= ? AND path = ? AND source <> 'test' GROUP BY day, source ORDER BY day LIMIT 5000`, per.from, per.to, path));
+  const days = {};
+  daily.forEach((d) => { if (source && srcBucket(d.source) !== source) return; const o = (days[d.day] = days[d.day] || { day: d.day, views: 0, clicks: 0 }); o.views += d.views || 0; o.clicks += d.clicks || 0; });
+  const campaigns = await all(env, `SELECT source, COALESCE(medium,'—') AS medium, campaign, SUM(kind='view') AS views,
+      SUM(kind='cta' AND product IN ('to-starter-kit','starter-kit','to-launchpad','launchpad','to-accelerator','accelerator')) AS clicks
+    FROM events WHERE day >= ? AND day <= ? AND path = ? AND campaign IS NOT NULL AND source <> 'test' GROUP BY source, medium, campaign ORDER BY views DESC LIMIT 20`, per.from, per.to, path);
+  return json({ range: per.range, from: per.from, to: per.to, source: source || "all", article: { ...art, url: "https://" + url.host + path },
+    totals: row, sources, trend: Object.values(days), campaigns,
+    conversions: { orders: null, revenue: null, status: "not_attributable",
+      note: "Payhip orders contain no link to a visit or article, so orders and revenue cannot be attributed to this article." } });
 }

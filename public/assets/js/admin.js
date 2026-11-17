@@ -2,7 +2,8 @@
 (function () {
   "use strict";
   var $ = function (s) { return document.querySelector(s); };
-  var state = { tab: "overview", range: "30d", orders: { page: 1, size: 10, status: "", q: "", sort: "date", dir: "desc" } };
+  var state = { tab: "overview", range: "30d", orders: { page: 1, size: 10, status: "", q: "", sort: "date", dir: "desc" },
+    blog: { page: 1, q: "", source: "", sort: "views", dir: "desc", from: "", to: "" } };
   var nlNum = new Intl.NumberFormat("nl-NL", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   var nlInt = new Intl.NumberFormat("nl-NL");
   var CUR = { EUR: "€", GBP: "£", USD: "$" };
@@ -32,7 +33,7 @@
 
   function api(path, opts) {
     var sep = path.indexOf("?") < 0 ? "?" : "&";
-    return fetch("/api/admin" + path + sep + "range=" + state.range, Object.assign({ credentials: "same-origin", headers: { accept: "application/json" } }, opts || {}))
+    return fetch("/api/admin" + path + (/[?&]range=/.test(path) ? "" : sep + "range=" + state.range), Object.assign({ credentials: "same-origin", headers: { accept: "application/json" } }, opts || {}))
       .then(function (r) {
         if (r.status === 403) throw new Error("Access denied — sign in again through Cloudflare Access.");
         if (r.status === 503) return r.json().catch(function () { return {}; }).then(function (d) {
@@ -95,7 +96,7 @@
     var grid = "";
     [0, 0.5, 1].forEach(function (g) { var yy = y(max * g); grid += '<line x1="' + P + '" x2="' + (W - P) + '" y1="' + yy + '" y2="' + yy + '" stroke="#262632"/><text x="2" y="' + (yy + 4) + '" fill="#9A9AAD" font-size="10">' + Math.round(max * g) + "</text>"; });
     var lab = '<text x="' + P + '" y="' + (H - 6) + '" fill="#9A9AAD" font-size="10">' + esc(keys[0]) + '</text><text x="' + (W - P) + '" y="' + (H - 6) + '" fill="#9A9AAD" font-size="10" text-anchor="end">' + esc(keys[keys.length - 1]) + "</text>";
-    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + line(function (d) { return d.v; }, "#25F4EE") + line(function (d) { return d.c; }, "#8B5CF6") + line(function (d) { return d.o; }, "#FE2C55") + lab + "</svg>";
+    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none">' + grid + line(function (d) { return d.v; }, "#25F4EE") + line(function (d) { return d.c; }, "#8B5CF6") + (tx.length ? line(function (d) { return d.o; }, "#FE2C55") : "") + lab + "</svg>";
   }
 
   /* ---------- tabs ---------- */
@@ -125,6 +126,47 @@
         table($("#t-sources"), cols("Source"), d.sources, { limit: 10 });
         table($("#t-countries"), cols("Country"), d.countries, { limit: 10 });
         table($("#t-devices"), cols("Device"), d.devices, { limit: 10 });
+      });
+    },
+    blog: function () {
+      var b = state.blog, qs = blogQuery();
+      $("#csv-blog").href = "/api/admin/blog?format=csv&" + qs;
+      return api("/blog?page=" + b.page + "&sort=" + b.sort + "&dir=" + b.dir + "&q=" + encodeURIComponent(b.q) + "&" + qs).then(function (d) {
+        var k = d.kpi, pv = d.prev;
+        $("#b-sub").textContent = (d.range === "all" ? "All time" : d.from + " to " + d.to) + " · Europe/Amsterdam" + (b.source ? " · source: " + b.source : "") + (pv ? " · compared with " + d.prev_period.from + " to " + d.prev_period.to : "");
+        $("#b-views").textContent = int(k.views);
+        $("#b-kit").textContent = int(k.kit);
+        $("#b-course").textContent = int(k.course);
+        $("#b-ctr").textContent = pct(k.ctr);
+        $("#b-views-d").innerHTML = delta(k.views, pv && pv.views, "Page loads of the articles");
+        $("#b-kit-d").innerHTML = delta(k.kit, pv && pv.kit, "Links to the Starter Kit");
+        $("#b-course-d").innerHTML = delta(k.course, pv && pv.course, "30-Day " + int(k.d30) + " · 90-Day " + int(k.d90));
+        $("#b-ctr-d").innerHTML = pv && pv.ctr !== null && k.ctr !== null ? "Previous period " + pct(pv.ctr) : "CTA clicks ÷ article views";
+        var cols = [
+          { h: "Article", s: "title", f: function (r) { return '<span class="art"><b>' + esc(r.title) + "</b><small>" + esc(r.path) + "</small></span>"; } },
+          { h: "Views", s: "views", n: 1, f: function (r) { return int(r.views); } },
+          { h: "Google", s: "google", n: 1, f: function (r) { return int(r.google); } },
+          { h: "Bing", s: "bing", n: 1, f: function (r) { return int(r.bing); } },
+          { h: "TikTok", s: "tiktok", n: 1, f: function (r) { return int(r.tiktok); } },
+          { h: "Free Kit", s: "kit", n: 1, f: function (r) { return int(r.kit); } },
+          { h: "30-Day", s: "d30", n: 1, f: function (r) { return int(r.d30); } },
+          { h: "90-Day", s: "d90", n: 1, f: function (r) { return int(r.d90); } },
+          { h: "CTR", s: "ctr", n: 1, f: function (r) { return pct(r.ctr); } }
+        ];
+        $("#b-sort").value = b.sort;
+        var el = $("#b-table");
+        if (!d.rows.length) { el.innerHTML = '<p class="empty">' + (b.q ? "No article matches this search." : "No published articles found.") + "</p>"; }
+        else {
+          var h = '<table class="stack"><thead><tr>' + cols.map(function (c) {
+            var on = b.sort === c.s, arrow = on ? (b.dir === "asc" ? " ↑" : " ↓") : "";
+            return '<th class="' + (c.n ? "n" : "") + '" aria-sort="' + (on ? (b.dir === "asc" ? "ascending" : "descending") : "none") + '"><button type="button" data-bsort="' + c.s + '"' + (on ? ' class="sorted"' : "") + ">" + esc(c.h) + arrow + "</button></th>";
+          }).join("") + "</tr></thead><tbody>";
+          d.rows.forEach(function (r) {
+            h += '<tr class="clickable" tabindex="0" data-art="' + esc(r.path) + '">' + cols.map(function (c) { return '<td data-l="' + esc(c.h) + '" class="' + (c.n ? "n" : "") + '">' + c.f(r) + "</td>"; }).join("") + "</tr>";
+          });
+          el.innerHTML = h + "</tbody></table>";
+        }
+        pager($("#b-pager"), d.page, d.pages, d.total, function (p) { b.page = p; loaders.blog().catch(function (e) { banner(e.message, true); }); });
       });
     },
     products: function () {
@@ -190,6 +232,46 @@
     return cols;
   }
 
+  function pct(v) { return v === null || v === undefined ? "—" : (v * 100).toLocaleString("nl-NL", { maximumFractionDigits: 1 }) + "%"; }
+  function delta(cur, prev, fallback) {
+    if (prev === null || prev === undefined) return esc(fallback);
+    if (!prev) return esc(fallback) + " · previous period 0";
+    var c = (cur - prev) / prev * 100, cls = c > 0 ? "delta-up" : c < 0 ? "delta-down" : "";
+    return '<span class="' + cls + '">' + (c > 0 ? "+" : c < 0 ? "\u2212" : "") + Math.abs(c).toLocaleString("nl-NL", { maximumFractionDigits: 0 }) + "%</span> vs previous period (" + int(prev) + ")";
+  }
+  function blogQuery() {
+    var b = state.blog;
+    var r = b.from && b.to ? "range=custom&from=" + b.from + "&to=" + b.to : "range=" + state.range;
+    return r + (b.source ? "&source=" + b.source : "");
+  }
+  function blogDetail(path) {
+    var dr = $("#b-drawer");
+    $("#bd-title").textContent = "Loading…"; $("#bd-body").innerHTML = ""; dr.hidden = false;
+    return api("/blog/article?path=" + encodeURIComponent(path) + "&" + blogQuery()).then(function (d) {
+      var t = d.totals, a = d.article;
+      $("#bd-title").textContent = a.title;
+      var src = Object.keys(d.sources).sort(function (x, y) { return d.sources[y] - d.sources[x]; });
+      var h = '<p class="sub"><a class="link" href="' + esc(a.url) + '" target="_blank" rel="noopener">' + esc(a.url) + "</a></p>" +
+        '<p class="sub">' + (d.range === "all" ? "All time" : esc(d.from) + " to " + esc(d.to)) + (d.source !== "all" ? " · source: " + esc(d.source) : "") + "</p>" +
+        '<div class="dl">' +
+        "<div><span>Views</span><b>" + int(t.views) + "</b></div>" +
+        "<div><span>Unique visitors</span><b>Not available</b></div>" +
+        "<div><span>Free Kit clicks</span><b>" + int(t.kit) + "</b></div>" +
+        "<div><span>30-Day clicks</span><b>" + int(t.d30) + "</b></div>" +
+        "<div><span>90-Day clicks</span><b>" + int(t.d90) + "</b></div>" +
+        "<div><span>CTR</span><b>" + pct(t.ctr) + "</b></div>" +
+        "<div><span>Confirmed orders / revenue</span><b>Not attributable</b></div>" +
+        "<div><span>Last activity</span><b>" + esc(when(t.last)) + "</b></div></div>" +
+        '<h3>Daily trend</h3><div class="legend"><i class="l-views"></i>Views <i class="l-clicks"></i>CTA clicks</div><div id="bd-chart" class="chart" role="img" aria-label="Daily views and CTA clicks"></div>' +
+        "<h3>Sources (views, all sources)</h3>" + (src.length ? '<table><tbody>' + src.map(function (k) { return "<tr><td>" + esc(k) + '</td><td class="n">' + int(d.sources[k]) + "</td></tr>"; }).join("") + "</tbody></table>" : '<p class="empty">No views in this period.</p>') +
+        "<h3>Campaigns (UTM)</h3>" + (d.campaigns.length ? '<table><thead><tr><th>Source / medium</th><th>Campaign</th><th class="n">Views</th><th class="n">Clicks</th></tr></thead><tbody>' + d.campaigns.map(function (c) { return "<tr><td>" + esc(c.source + " / " + c.medium) + "</td><td>" + esc(c.campaign) + '</td><td class="n">' + int(c.views) + '</td><td class="n">' + int(c.clicks) + "</td></tr>"; }).join("") + "</tbody></table>" : '<p class="empty">No tagged campaign visits in this period.</p>') +
+        '<p class="note small">' + esc(d.conversions.note) + " Clicks are not sales.</p>";
+      $("#bd-body").innerHTML = h;
+      chart($("#bd-chart"), d.trend, [], d.from);
+      $("#bd-close").focus();
+    }).catch(function (e) { $("#bd-title").textContent = "Could not load"; $("#bd-body").innerHTML = '<p class="empty">' + esc(e.message) + "</p>"; });
+  }
+
   function healthList(el, h) {
     var items = [
       ["Payhip webhook secret", h.payhip_secret_set ? '<span class="ok">Set</span>' : '<span class="bad">Missing</span>'],
@@ -219,9 +301,30 @@
     if ((t = e.target.closest("[data-tab]"))) return show(t.getAttribute("data-tab"));
     if ((t = e.target.closest("[data-goto]"))) return show(t.getAttribute("data-goto"));
     if ((t = e.target.closest("[data-range]"))) {
-      state.range = t.getAttribute("data-range"); state.orders.page = 1;
+      state.range = t.getAttribute("data-range"); state.orders.page = 1; state.blog.page = 1;
+      state.blog.from = state.blog.to = ""; $("#b-from").value = $("#b-to").value = ""; $("#b-apply").classList.remove("on"); $("#b-clear").hidden = true;
       document.querySelectorAll("[data-range]").forEach(function (b) { b.classList.toggle("on", b === t); });
       return show(state.tab);
+    }
+    if ((t = e.target.closest("[data-bsort]"))) {
+      var sk = t.getAttribute("data-bsort");
+      state.blog.dir = state.blog.sort === sk ? (state.blog.dir === "asc" ? "desc" : "asc") : (sk === "title" ? "asc" : "desc");
+      state.blog.sort = sk; state.blog.page = 1;
+      return loaders.blog().catch(function (err) { banner(err.message, true); });
+    }
+    if ((t = e.target.closest("tr[data-art]"))) return blogDetail(t.getAttribute("data-art"));
+    if (e.target.id === "bd-close" || e.target.id === "b-drawer") { $("#b-drawer").hidden = true; return; }
+    if (e.target.id === "b-apply") {
+      var f = $("#b-from").value, to = $("#b-to").value;
+      if (!f || !to || f > to) { banner("Choose a start and end date (start before end) for a custom period.", true); return; }
+      banner(""); state.blog.from = f; state.blog.to = to; state.blog.page = 1;
+      $("#b-apply").classList.add("on"); $("#b-clear").hidden = false;
+      return loaders.blog().catch(function (err) { banner(err.message, true); });
+    }
+    if (e.target.id === "b-clear") {
+      state.blog.from = state.blog.to = ""; $("#b-from").value = $("#b-to").value = ""; state.blog.page = 1;
+      $("#b-apply").classList.remove("on"); $("#b-clear").hidden = true;
+      return loaders.blog().catch(function (err) { banner(err.message, true); });
     }
     if ((t = e.target.closest("[data-test]"))) {
       t.disabled = true;
@@ -242,6 +345,16 @@
   $("#o-q").addEventListener("input", function () { clearTimeout(qTimer); qTimer = setTimeout(function () { state.orders.q = $("#o-q").value; state.orders.page = 1; loaders.orders().catch(function (e) { banner(e.message, true); }); }, 250); });
   $("#o-status").addEventListener("change", function () { state.orders.status = this.value; state.orders.page = 1; loaders.orders().catch(function (e) { banner(e.message, true); }); });
   $("#o-size").addEventListener("change", function () { state.orders.size = Number(this.value); state.orders.page = 1; loaders.orders().catch(function (e) { banner(e.message, true); }); });
+
+  var bTimer;
+  $("#b-q").addEventListener("input", function () { clearTimeout(bTimer); bTimer = setTimeout(function () { state.blog.q = $("#b-q").value; state.blog.page = 1; loaders.blog().catch(function (e) { banner(e.message, true); }); }, 250); });
+  $("#b-sort").addEventListener("change", function () { state.blog.sort = this.value; state.blog.dir = this.value === "title" ? "asc" : "desc"; state.blog.page = 1; loaders.blog().catch(function (e) { banner(e.message, true); }); });
+  $("#b-source").addEventListener("change", function () { state.blog.source = this.value; state.blog.page = 1; loaders.blog().catch(function (e) { banner(e.message, true); }); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("#b-drawer").hidden) $("#b-drawer").hidden = true;
+    var tr = e.target.closest && e.target.closest("tr[data-art]");
+    if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); blogDetail(tr.getAttribute("data-art")); }
+  });
 
   fetch("/api/admin/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d && d.email) $("#who").textContent = "Signed in as " + d.email; }).catch(function () {});
   var initial = (location.hash || "").replace("#", "");
