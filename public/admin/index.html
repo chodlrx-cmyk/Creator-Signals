@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Admin · Creator Signals</title>
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
-<link rel="stylesheet" href="/assets/css/admin.css">
-<script src="/assets/js/admin.js?v=20261116" defer></script>
+<link rel="stylesheet" href="/assets/css/admin.css?v=20261117">
+<script src="/assets/js/admin.js?v=20261117" defer></script>
 </head>
 <body>
 <header class="top">
@@ -16,6 +16,7 @@
     <nav class="tabs" aria-label="Sections">
       <button type="button" data-tab="overview" aria-current="page">Overview</button>
       <button type="button" data-tab="traffic">Traffic</button>
+      <button type="button" data-tab="blog">Blog</button>
       <button type="button" data-tab="products">Products</button>
       <button type="button" data-tab="orders">Orders</button>
       <button type="button" data-tab="campaigns">Campaigns</button>
@@ -60,6 +61,37 @@
       <div class="card"><div class="card-h"><h2>Sources</h2></div><div id="t-sources"></div></div>
       <div class="card"><div class="card-h"><h2>Countries</h2></div><div id="t-countries"></div></div>
       <div class="card"><div class="card-h"><h2>Devices</h2></div><div id="t-devices"></div></div>
+    </div>
+  </section>
+
+  <!-- BLOG ANALYTICS -->
+  <section id="tab-blog" class="tab" hidden>
+    <div class="head"><div><h1>Blog analytics</h1><p class="sub" id="b-sub">—</p></div><a class="btn" id="csv-blog" href="/api/admin/blog?format=csv&amp;range=30d">Export (CSV)</a></div>
+    <div class="kpis kpis-5">
+      <div class="kpi"><span>Article views</span><b id="b-views">—</b><small id="b-views-d">Page loads of the articles</small></div>
+      <div class="kpi"><span>Unique readers</span><b class="na">Not available</b><small>Cookieless: no identifiers are stored, so readers cannot be de-duplicated</small></div>
+      <div class="kpi"><span>Free Kit clicks</span><b id="b-kit">—</b><small id="b-kit-d">Links to the Starter Kit</small></div>
+      <div class="kpi"><span>Course clicks</span><b id="b-course">—</b><small id="b-course-d">30-Day + 90-Day course pages</small></div>
+      <div class="kpi"><span>Article CTA CTR</span><b id="b-ctr">—</b><small id="b-ctr-d">CTA clicks ÷ article views</small></div>
+    </div>
+    <div class="filters">
+      <input type="search" id="b-q" placeholder="Search article title" aria-label="Search articles">
+      <select id="b-sort" class="mobile-only" aria-label="Sort articles by"><option value="views">Sort: Views</option><option value="title">Sort: Title</option><option value="google">Sort: Google</option><option value="bing">Sort: Bing</option><option value="tiktok">Sort: TikTok</option><option value="kit">Sort: Free Kit</option><option value="d30">Sort: 30-Day</option><option value="d90">Sort: 90-Day</option><option value="ctr">Sort: CTR</option></select>
+      <select id="b-source" aria-label="Source"><option value="">All sources</option><option value="google">Google</option><option value="bing">Bing</option><option value="tiktok">TikTok</option><option value="direct">Direct</option><option value="internal">Internal links</option><option value="other">Other</option></select>
+      <div class="custom" role="group" aria-label="Custom period">
+        <label>From <input type="date" id="b-from"></label>
+        <label>To <input type="date" id="b-to"></label>
+        <button type="button" class="btn small" id="b-apply">Custom</button>
+        <button type="button" class="btn small" id="b-clear" hidden>Clear</button>
+      </div>
+    </div>
+    <div class="card"><div id="b-table"></div><div class="pager" id="b-pager"></div></div>
+    <p class="note"><b>How these numbers work.</b> Views = page loads of the article (cookieless; bots and your own signed-in admin browser are not counted; links tagged <code>utm_source=test</code> are left out). Free Kit / 30-Day / 90-Day = clicks on the article's links to <code>/starter-kit/</code>, <code>/academy/launchpad/</code> and <code>/academy/accelerator/</code>, counted from 17 Nov 2026. CTR = (Free Kit + 30-Day + 90-Day clicks) ÷ views in the same period and source. A click is not a sale. Orders and revenue are <b>not attributable</b> to articles: Payhip orders carry no link to a visit. Google / Bing / TikTok = views arriving from that site (or tagged with that <code>utm_source</code>). Bing is counted separately from 17 Nov 2026; earlier Bing visits sit under “Other”.</p>
+    <div class="drawer" id="b-drawer" hidden>
+      <div class="drawer-in" role="dialog" aria-modal="false" aria-labelledby="bd-title">
+        <div class="card-h"><h2 id="bd-title">—</h2><button type="button" class="btn small" id="bd-close" aria-label="Close details">Close ✕</button></div>
+        <div id="bd-body"></div>
+      </div>
     </div>
   </section>
 

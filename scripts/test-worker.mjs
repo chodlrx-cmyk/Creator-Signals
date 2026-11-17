@@ -3,7 +3,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { createHash, generateKeyPairSync, createSign } from "node:crypto";
-import worker, { classifySource, rangeStart, amsDay } from "../src/worker.js";
+import worker, { classifySource, rangeStart, amsDay, blogPeriod } from "../src/worker.js";
 
 let pass = 0, fail = 0;
 const check = (name, cond, info) => { if (cond) pass++; else { fail++; console.log("FAIL", name, info === undefined ? "" : JSON.stringify(info)); } };
@@ -59,6 +59,8 @@ const sig = createHash("sha256").update(API_KEY).digest("hex");
 check("source tiktok", classifySource("https://www.tiktok.com/@x", "creatorsignals.blog") === "tiktok");
 check("source internal", classifySource("https://creatorsignals.blog/academy/", "creatorsignals.blog") === "internal");
 check("source direct", classifySource("", "creatorsignals.blog") === "direct");
+check("source bing", classifySource("https://www.bing.com/search?q=x", "creatorsignals.blog") === "bing");
+check("source duckduckgo", classifySource("https://duckduckgo.com/", "creatorsignals.blog") === "search-other");
 check("source google", classifySource("https://www.google.nl/", "creatorsignals.blog") === "google");
 check("amsterdam day boundary", amsDay(Date.UTC(2026, 10, 16, 23, 30) / 1000) === "2026-11-17", amsDay(Date.UTC(2026, 10, 16, 23, 30) / 1000));
 check("range 7d", rangeStart("7d", Date.UTC(2026, 10, 16, 12) / 1000) === "2026-11-10");
@@ -176,6 +178,95 @@ check("range all", rangeStart("all") === "0000-00-00");
   check("traffic", Array.isArray(tr.sources) && tr.sources.length >= 1);
   const cp = await (await admin(env, "/api/admin/campaigns?range=all")).json();
   check("campaigns", Array.isArray(cp.rows));
+}
+
+/* ---------- blog analytics ---------- */
+{
+  const slugs = Array.from({ length: 12 }, (_, i) => (i < 3 ? ["how-to-start-on-tiktok", "tiktok-hook-examples", "how-often-to-post-on-tiktok"][i] : "article-" + String(i).padStart(2, "0")));
+  const titles = { "how-to-start-on-tiktok": "How to start on TikTok: a beginner&#39;s plan", "tiktok-hook-examples": "TikTok hook examples: 7 types that work", "how-often-to-post-on-tiktok": "How often should you post on TikTok?" };
+  const assets = { fetch: async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path === "/blog/") return new Response(`<html><a href="/blog/">Blog</a>${slugs.map((s) => `<a href="/blog/${s}/">x</a>`).join("")}<a href="/academy/">A</a></html>`);
+    const m = path.match(/^\/blog\/([a-z0-9-]+)\/$/);
+    if (m && slugs.includes(m[1])) return new Response(`<html><head><title>${titles[m[1]] || "Article " + m[1]} · Creator Signals</title></head></html>`);
+    return new Response("not found", { status: 404 });
+  } };
+  const env = makeEnv({ ASSETS: assets });
+  const post = (body, headers = {}) => call(env, "/api/e", { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json", origin: H, "user-agent": "Mozilla/5.0", ...headers } });
+  const A = "/blog/how-to-start-on-tiktok/", B = "/blog/tiktok-hook-examples/";
+  for (let i = 0; i < 4; i++) await post({ k: "view", p: A, r: "https://www.google.com/" });
+  await post({ k: "view", p: A, r: "https://www.bing.com/" });
+  await post({ k: "view", p: A, r: "", u: { s: "tiktok", m: "carousel", c: "cs-carousel-start" } });
+  await post({ k: "cta", p: A, pr: "to-starter-kit", r: "https://www.google.com/" });
+  await post({ k: "cta", p: A, pr: "to-launchpad", r: "https://www.google.com/" });
+  await post({ k: "cta", p: A, pr: "to-accelerator", r: "", u: { s: "tiktok", m: "carousel", c: "cs-carousel-start" } });
+  await post({ k: "view", p: B, r: "https://www.tiktok.com/" });
+  await post({ k: "view", p: B, r: "https://www.tiktok.com/" });
+  await post({ k: "view", p: "/blog/", r: "" });                                    // index: not an article
+  await post({ k: "view", p: "/blog/does-not-exist/", r: "" });                     // not published: ignored
+  await post({ k: "view", p: A, r: "", u: { s: "test" } });                         // tagged test traffic: excluded
+  const own = await post({ k: "view", p: A, r: "" }, { cookie: "foo=1; CF_Authorization=eyJx" });
+  check("admin browser not counted", own.status === 204 && env.DB.raw.prepare("SELECT COUNT(*) AS n FROM events").get().n === 14, env.DB.raw.prepare("SELECT COUNT(*) AS n FROM events").get().n);
+  check("blog requires Access", (await call(env, "/api/admin/blog?range=all")).status === 403);
+  const r = await admin(env, "/api/admin/blog?range=all");
+  const d = await r.json();
+  check("blog 200", r.status === 200, d);
+  check("blog: 12 articles, 10 per page, 2 pages", d.total === 12 && d.rows.length === 10 && d.pages === 2 && d.size === 10, [d.total, d.rows.length, d.pages]);
+  const a = d.rows[0];
+  check("blog: sorted by views desc", a.path === A && d.rows[1].path === B, d.rows.slice(0, 2).map((x) => x.path));
+  check("blog: title from <title>, entity decoded, suffix removed", a.title === "How to start on TikTok: a beginner's plan", a.title);
+  check("blog: views exclude test traffic and admin", a.views === 6, a.views);
+  check("blog: sources", a.google === 4 && a.bing === 1 && a.tiktok === 1 && d.rows[1].tiktok === 2, a);
+  check("blog: CTA columns", a.kit === 1 && a.d30 === 1 && a.d90 === 1 && a.clicks === 3, a);
+  check("blog: CTR = clicks / views", Math.abs(a.ctr - 0.5) < 1e-9, a.ctr);
+  check("blog: zero-view CTR is null, not 0", d.rows[2].views === 0 && d.rows[2].ctr === null);
+  check("blog: KPIs (index + unknown path ignored)", d.kpi.views === 8 && d.kpi.kit === 1 && d.kpi.course === 2 && Math.abs(d.kpi.ctr - 3 / 8) < 1e-9 && d.kpi.unique_readers === null, d.kpi);
+  check("blog: attribution flags", d.attribution.orders === "not_attributable" && d.attribution.unique_readers === "not_available");
+  check("blog: all-time has no comparison", d.prev === null);
+  const ov = await (await admin(env, "/api/admin/overview?range=all")).json();
+  check("overview product clicks exclude blog navigation clicks", ov.kpi.clicks === 0 && ov.kpi.views === 11, ov.kpi);
+  const p2 = await (await admin(env, "/api/admin/blog?range=all&page=2")).json();
+  check("blog: page 2 has 2 rows", p2.page === 2 && p2.rows.length === 2);
+  const p9 = await (await admin(env, "/api/admin/blog?range=all&page=99")).json();
+  check("blog: page clamped", p9.page === 2);
+  const p0 = await (await admin(env, "/api/admin/blog?range=all&page=-3")).json();
+  check("blog: page floor 1", p0.page === 1);
+  const g = await (await admin(env, "/api/admin/blog?range=all&source=bing")).json();
+  check("blog: source filter", g.rows[0].path === A && g.rows[0].views === 1 && g.kpi.views === 1 && g.kpi.clicks === 0, g.kpi);
+  const tk = await (await admin(env, "/api/admin/blog?range=all&source=tiktok")).json();
+  check("blog: tiktok filter incl. utm", tk.kpi.views === 3 && tk.kpi.d90 === 1, tk.kpi);
+  const sq = await (await admin(env, "/api/admin/blog?range=all&q=HOOK")).json();
+  check("blog: search by title", sq.total === 1 && sq.rows[0].path === B);
+  const st = await (await admin(env, "/api/admin/blog?range=all&sort=title&dir=asc")).json();
+  check("blog: sort by title asc", st.rows[0].title.startsWith("Article"), st.rows[0].title);
+  const sc = await (await admin(env, "/api/admin/blog?range=all&sort=ctr&dir=asc")).json();
+  check("blog: CTR sort asc, empty values last", sc.rows[0].path === B && sc.rows[1].path === A && sc.rows[9].ctr === null, sc.rows.slice(0, 2));
+  const bad = await admin(env, "/api/admin/blog?range=all&sort=views;DROP TABLE events&source=x'--");
+  check("blog: hostile params ignored", bad.status === 200 && (await bad.json()).sort === "views" && env.DB.raw.prepare("SELECT COUNT(*) AS n FROM events").get().n === 14);
+  check("blog: bad custom range 400", (await admin(env, "/api/admin/blog?range=custom&from=2026-11-10&to=2026-11-01")).status === 400);
+  check("blog: malformed date 400", (await admin(env, "/api/admin/blog?range=custom&from=2026-1-1&to=2026-11-01")).status === 400);
+  const today = amsDay(Math.floor(Date.now() / 1000));
+  const cu = await (await admin(env, `/api/admin/blog?range=custom&from=${today}&to=${today}`)).json();
+  check("blog: custom range + previous period", cu.kpi.views === 8 && cu.prev && cu.prev.views === 0 && cu.prev_period.to < today, cu.prev_period);
+  const old = await (await admin(env, "/api/admin/blog?range=custom&from=2025-01-01&to=2025-01-31")).json();
+  check("blog: empty period is zero, no error", old.kpi.views === 0 && old.kpi.ctr === null && old.total === 12);
+  const csv = await (await admin(env, "/api/admin/blog?range=all&format=csv")).text();
+  const lines = csv.trim().split("\n");
+  check("blog CSV: header + all 12 rows (not paged)", lines[0].startsWith("article,url,views") && lines.length === 13, lines.length);
+  check("blog CSV: values", lines[1].includes('"https://creatorsignals.blog/blog/how-to-start-on-tiktok/","6","4","1","1","1","1","1","3","50.0"'), lines[1]);
+  const det = await (await admin(env, "/api/admin/blog/article?range=all&path=" + encodeURIComponent(A))).json();
+  check("detail: totals + sources", det.totals.views === 6 && det.sources.google === 4 && det.sources.bing === 1 && det.sources.tiktok === 1, det.sources);
+  check("detail: trend", det.trend.length === 1 && det.trend[0].views === 6 && det.trend[0].clicks === 3, det.trend);
+  check("detail: campaign", det.campaigns.length === 1 && det.campaigns[0].campaign === "cs-carousel-start" && det.campaigns[0].views === 1 && det.campaigns[0].clicks === 1, det.campaigns);
+  check("detail: conversions not attributable", det.conversions.status === "not_attributable" && det.conversions.orders === null && det.conversions.revenue === null);
+  check("detail: last activity", typeof det.totals.last === "number");
+  check("detail: unknown article 404", (await admin(env, "/api/admin/blog/article?range=all&path=/blog/does-not-exist/")).status === 404);
+  check("detail: bad path 400", (await admin(env, "/api/admin/blog/article?range=all&path=" + encodeURIComponent("/etc/passwd"))).status === 400);
+  check("detail requires Access", (await call(env, "/api/admin/blog/article?path=" + encodeURIComponent(A))).status === 403);
+  const sp = (q) => blogPeriod(new URLSearchParams(q), Date.UTC(2026, 10, 17, 12) / 1000);
+  const p7 = sp("range=7d");
+  check("period 7d + previous 7d", p7.from === "2026-11-11" && p7.to === "2026-11-17" && p7.prev.from === "2026-11-04" && p7.prev.to === "2026-11-10", p7);
+  check("period too long refused", sp("range=custom&from=2020-01-01&to=2026-01-01").error === "range_too_long");
 }
 
 console.log(`${pass + fail} checks · ${pass} PASS · ${fail} FAIL`);

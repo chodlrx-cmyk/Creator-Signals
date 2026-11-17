@@ -109,7 +109,12 @@
       var m = href.match(/^https:\/\/payhip\.com\/b\/([A-Za-z0-9]+)/);
       if (m && (PRODUCTS[m[1]] || tagged)) return send("cta", tagged || PRODUCTS[m[1]]);
       if (/^\/downloads\/creator-starter-kit\.pdf/.test(href)) return send("download", "starter-kit");
-      if (tagged) send("cta", tagged);
+      if (tagged) return send("cta", tagged);
+      /* Blog articles: clicks on links to the free kit / course pages ("to-" = navigation, not a checkout click). */
+      if (location.pathname.indexOf("/blog/") === 0) {
+        var to = { "/starter-kit/": "to-starter-kit", "/academy/launchpad/": "to-launchpad", "/academy/accelerator/": "to-accelerator" }[href.split(/[?#]/)[0]];
+        if (to) send("cta", to);
+      }
     }, true);
   })();
 })();
