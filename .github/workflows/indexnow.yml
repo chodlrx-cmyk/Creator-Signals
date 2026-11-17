@@ -1,0 +1,20 @@
+name: IndexNow
+# Tells Bing (and other IndexNow engines) about the pages in the sitemap after a deploy.
+# The key is public by design: https://creatorsignals.blog/980e757a6049c7c443b38ba79b69cff5.txt
+on:
+  push:
+    branches: [main]
+    paths: ["public/**"]
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for the Cloudflare deploy
+        run: sleep 180
+      - name: Submit sitemap URLs
+        run: |
+          URLS=$(grep -o '<loc>[^<]*</loc>' public/sitemap.xml | sed -e 's#<loc>##' -e 's#</loc>##' | python3 -c 'import sys,json;print(json.dumps([l.strip() for l in sys.stdin if l.strip()]))')
+          BODY=$(printf '{"host":"creatorsignals.blog","key":"%s","keyLocation":"https://creatorsignals.blog/%s.txt","urlList":%s}' "980e757a6049c7c443b38ba79b69cff5" "980e757a6049c7c443b38ba79b69cff5" "$URLS")
+          curl -sS -o /dev/null -w "IndexNow HTTP %{http_code}\n" -X POST "https://api.indexnow.org/indexnow" -H "Content-Type: application/json; charset=utf-8" -d "$BODY"

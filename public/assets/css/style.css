@@ -424,3 +424,4 @@ footer.site{padding:64px 0 36px;border-top:1px solid var(--line);margin-top:88px
 @media (max-width:920px){.bundle-grid{grid-template-columns:1fr;gap:22px}.bf-sub{display:block}}
 .bundle-grid .for{margin-bottom:18px}
 .bf-sub::before{content:"· "}@media (max-width:920px){.bf-sub::before{content:none}}
+.weeks.weeks-3{grid-template-columns:repeat(3,1fr)}@media (max-width:1000px){.weeks.weeks-3{grid-template-columns:1fr}}
