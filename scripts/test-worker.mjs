@@ -3,7 +3,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 import { createHash, generateKeyPairSync, createSign } from "node:crypto";
-import worker, { classifySource, rangeStart, amsDay, blogPeriod } from "../src/worker.js";
+import worker, { classifySource, rangeStart, amsDay, blogPeriod, Presence } from "../src/worker.js";
 
 let pass = 0, fail = 0;
 const check = (name, cond, info) => { if (cond) pass++; else { fail++; console.log("FAIL", name, info === undefined ? "" : JSON.stringify(info)); } };
@@ -267,6 +267,38 @@ check("range all", rangeStart("all") === "0000-00-00");
   const p7 = sp("range=7d");
   check("period 7d + previous 7d", p7.from === "2026-11-11" && p7.to === "2026-11-17" && p7.prev.from === "2026-11-04" && p7.prev.to === "2026-11-10", p7);
   check("period too long refused", sp("range=custom&from=2020-01-01&to=2026-01-01").error === "range_too_long");
+}
+
+/* ---------- live presence ("Now online") ---------- */
+{
+  const obj = new Presence({}, {});
+  const PRESENCE = { idFromName: (n) => n, get: () => ({ fetch: (u, init) => obj.fetch(new Request(u, init)) }) };
+  const env = makeEnv({ PRESENCE });
+  const beat = (body, headers = {}) => call(env, "/api/p", { method: "POST", body: JSON.stringify(body), headers: { "content-type": "application/json", origin: H, "user-agent": "Mozilla/5.0 (iPhone)", ...headers } });
+  const live = async () => (await admin(env, "/api/admin/live")).json();
+  const A = "a".repeat(24), B = "b".repeat(24), C = "c".repeat(24);
+  check("live: empty at start", (await live()).online === 0);
+  check("live: beat accepted", (await beat({ i: A, p: "/blog/x/" })).status === 204);
+  await beat({ i: A, p: "/blog/x/" });
+  await beat({ i: B, p: "/" }, { "user-agent": "Mozilla/5.0 (Windows NT 10.0)" });
+  let d = await live();
+  check("live: two open pages, repeat beat not double-counted", d.available === true && d.online === 2, d);
+  check("live: pages + devices", d.pages.length === 2 && d.devices.find((x) => x.k === "mobile").n === 1 && d.devices.find((x) => x.k === "desktop").n === 1, d);
+  check("live: bot ignored", (await beat({ i: C, p: "/" }, { "user-agent": "Googlebot/2.1" })).status === 204 && (await live()).online === 2);
+  check("live: admin browser ignored", (await beat({ i: C, p: "/" }, { cookie: "CF_Authorization=x" })).status === 204 && (await live()).online === 2);
+  check("live: foreign origin refused", (await beat({ i: C, p: "/" }, { origin: "https://evil.example" })).status === 403);
+  check("live: bad id refused", (await beat({ i: "x'; DROP", p: "/" })).status === 400);
+  check("live: admin path refused", (await beat({ i: C, p: "/admin/" })).status === 400);
+  check("live: GET refused", (await call(env, "/api/p")).status === 405);
+  await beat({ i: A, a: "leave" });
+  check("live: leave removes at once", (await live()).online === 1);
+  obj.pages.get(B).t -= (Presence.TTL + 1) * 1000;
+  check("live: silent page expires after TTL", (await live()).online === 0);
+  check("live: nothing written to D1", env.DB.raw.prepare("SELECT COUNT(*) AS n FROM events").get().n === 0);
+  check("live requires Access", (await call(env, "/api/admin/live")).status === 403);
+  const noDo = makeEnv();
+  check("live: no binding → beat still 204", (await call(noDo, "/api/p", { method: "POST", body: JSON.stringify({ i: A, p: "/" }), headers: { origin: H } })).status === 204);
+  check("live: no binding → available:false", (await (await admin(noDo, "/api/admin/live")).json()).available === false);
 }
 
 console.log(`${pass + fail} checks · ${pass} PASS · ${fail} FAIL`);

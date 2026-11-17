@@ -101,6 +101,27 @@
       try { fetch("/api/e", { method: "POST", body: body, headers: { "content-type": "application/json" }, keepalive: true }); } catch (e) {}
     }
     send("view");
+
+    /* Live "Now online" heartbeat: only while this page is in view. The random number below lives only in this
+       page's memory (a new one on every page load) and is never stored; the server forgets it after 50 seconds. */
+    var pid = "";
+    try { var rb = new Uint8Array(12); crypto.getRandomValues(rb); for (var bi = 0; bi < rb.length; bi++) pid += (rb[bi] + 256).toString(16).slice(1); } catch (e) { pid = ""; }
+    if (pid) {
+      var beatTimer = null;
+      var ping = function (leave) {
+        var pb = JSON.stringify(leave ? { i: pid, a: "leave" } : { i: pid, p: location.pathname });
+        try {
+          if (leave && nav.sendBeacon && nav.sendBeacon("/api/p", new Blob([pb], { type: "application/json" }))) return;
+          fetch("/api/p", { method: "POST", body: pb, headers: { "content-type": "application/json" }, keepalive: true }).catch(function () {});
+        } catch (e) {}
+      };
+      var start = function () { if (beatTimer) return; ping(false); beatTimer = setInterval(function () { ping(false); }, 20000); };
+      var stop = function () { if (!beatTimer) return; clearInterval(beatTimer); beatTimer = null; ping(true); };
+      document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") start(); else stop(); });
+      window.addEventListener("pagehide", stop);
+      window.addEventListener("pageshow", function (e) { if (e.persisted && document.visibilityState === "visible") start(); });
+      if (document.visibilityState === "visible") start();
+    }
     document.addEventListener("click", function (e) {
       var a = e.target.closest && e.target.closest("a[href]");
       if (!a) return;

@@ -25,6 +25,9 @@
   "preview_urls": true,
   "observability": { "enabled": true },
   // Admin data (no e-mail or IP addresses are stored). Schema: migrations/.
+  // Live "Now online" counter: one Durable Object that keeps open pages in memory only (no storage used).
+  "durable_objects": { "bindings": [{ "name": "PRESENCE", "class_name": "Presence" }] },
+  "migrations": [{ "tag": "v1-presence", "new_sqlite_classes": ["Presence"] }],
   "d1_databases": [
     { "binding": "DB", "database_name": "creator-signals-admin", "database_id": "f17d2d9c-dd11-47f9-a74f-c3303d635bf9", "migrations_dir": "migrations" }
   ],

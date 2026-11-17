@@ -356,6 +356,41 @@
     if (tr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); blogDetail(tr.getAttribute("data-art")); }
   });
 
+  /* ---------- Live "Now online" (refreshes every 15 s while this dashboard is in view; independent of the date range) ---------- */
+  var COUNTRY = (function () { try { return new Intl.DisplayNames(["en"], { type: "region" }); } catch (e) { return null; } })();
+  function liveList(el, rows, label) {
+    el.innerHTML = rows && rows.length
+      ? rows.slice(0, 6).map(function (r) { return '<li><span title="' + esc(label(r.k)) + '">' + esc(label(r.k)) + "</span><span>" + int(r.n) + "</span></li>"; }).join("")
+      : '<li class="none">—</li>';
+  }
+  var liveTimer = null, liveBusy = false;
+  function live() {
+    if (liveBusy || document.visibilityState !== "visible") return;
+    liveBusy = true;
+    fetch("/api/admin/live", { credentials: "same-origin", headers: { accept: "application/json" } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (d) {
+        var on = d.available !== false;
+        var n = on ? d.online : null;
+        $("#live-pill-n").textContent = int(n);
+        $("#live-n").textContent = int(n);
+        $("#live-pill").classList.toggle("is-live", !!n);
+        $("#live").classList.toggle("is-live", !!n);
+        $("#live-note").textContent = !on ? "Live counter not connected yet (deploy pending)"
+          : (d.warming ? "Just restarted — counting resumes within " + d.beat + " s · " : "Open pages in view, last " + d.window + " s · ")
+            + "updated " + new Intl.DateTimeFormat("nl-NL", { timeZone: "Europe/Amsterdam", timeStyle: "medium" }).format(new Date(d.at * 1000));
+        liveList($("#live-pages"), on && d.pages, function (k) { return k; });
+        liveList($("#live-devices"), on && d.devices, function (k) { return k === "mobile" ? "Mobile" : k === "desktop" ? "Desktop" : k; });
+        liveList($("#live-countries"), on && d.countries, function (k) { return k === "—" ? "Unknown" : (COUNTRY ? COUNTRY.of(k) : k); });
+      })
+      .catch(function () { $("#live-note").textContent = "Live count unavailable — retrying"; $("#live-pill-n").textContent = "—"; $("#live-n").textContent = "—"; $("#live-pill").classList.remove("is-live"); $("#live").classList.remove("is-live"); })
+      .then(function () { liveBusy = false; });
+  }
+  function liveStart() { if (!liveTimer) { live(); liveTimer = setInterval(live, 15000); } }
+  function liveStop() { clearInterval(liveTimer); liveTimer = null; }
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") liveStart(); else liveStop(); });
+  liveStart();
+
   fetch("/api/admin/me", { credentials: "same-origin" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) { if (d && d.email) $("#who").textContent = "Signed in as " + d.email; }).catch(function () {});
   var initial = (location.hash || "").replace("#", "");
   show(loaders[initial] ? initial : "overview");

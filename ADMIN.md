@@ -8,10 +8,13 @@ A private dashboard for page views, product clicks, free downloads, confirmed Pa
 | Part | What it does | Where |
 |---|---|---|
 | Cookieless measurement | Counts page views, product-button clicks and Starter Kit download clicks. Respects Global Privacy Control / Do Not Track. Kept 25 months | `public/assets/js/main.js` → `POST /api/e` |
+| Live "Now online" | Open pages that are in view send a heartbeat every 20 s with a random per-page-load number (memory only, no cookie/storage). A Durable Object (`Presence`) keeps them in memory for at most 50 s — nothing is written to D1, so it does not use the free D1 read/write quota. Admin browsers, bots and GPC/DNT are excluded. Shown in the header on every tab and as a card on Overview (pages, devices, countries), refreshed every 15 s | `public/assets/js/main.js` → `POST /api/p` → `Presence` in `src/worker.js`; `GET /api/admin/live` |
 | Payhip webhook | Receives signed `paid` and `refunded` events. Each order and each refund is processed once (idempotent). Only order number, product, amount, fees and refund status are stored | `POST /api/payhip/webhook` |
 | Admin UI | Overview · Traffic · Products · Orders · Campaigns · Settings; 7D / 30D / 90D / All; CSV export; times in Europe/Amsterdam | `public/admin/`, `public/assets/{js,css}/admin.*` |
 | Access control | Cloudflare Access in front, plus a fail-closed check of the Access token in the Worker (signature, audience, issuer, expiry, optional e-mail allow-list) | `src/worker.js` |
 | Database | Cloudflare D1 `creator-signals-admin` (schema already applied) | `migrations/0001_admin.sql` |
+
+**How "Now online" counts:** one open page in view = one. Two tabs of the site in view at once count as two; a tab in the background, a minimised window or a locked phone does not count. Leaving a page removes it immediately; a page that stops sending (lost connection) drops off after 50 s. Right after a deploy the counter starts at 0 and is complete again within 20 s.
 
 **What is not measured:**
 - Unique visitors: that would need an identifier.
@@ -41,12 +44,13 @@ The dashboard says so where it matters and never fills gaps with estimates.
 
 ## Tests
 
-`npm run test:worker` runs 57 checks against the real Worker with an in-memory SQLite in place of D1:
+`npm run test:worker` runs 115 checks against the real Worker with an in-memory SQLite in place of D1:
 - measurement;
 - webhook signature and idempotency;
 - refunds and test orders;
 - Access token checks (forged, expired, wrong audience, not on the allow-list);
 - CSRF on changes;
-- CSV exports.
+- CSV exports;
+- live presence (heartbeat, leave, expiry after 50 s, bots/admin/foreign origins ignored, nothing written to D1).
 
 It runs in CI and in `npm run check`.

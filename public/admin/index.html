@@ -6,8 +6,8 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Admin · Creator Signals</title>
 <link rel="icon" type="image/png" sizes="48x48" href="/assets/img/favicon-48.png">
-<link rel="stylesheet" href="/assets/css/admin.css?v=20261117">
-<script src="/assets/js/admin.js?v=20261117" defer></script>
+<link rel="stylesheet" href="/assets/css/admin.css?v=20261117b">
+<script src="/assets/js/admin.js?v=20261117b" defer></script>
 </head>
 <body>
 <header class="top">
@@ -22,6 +22,7 @@
       <button type="button" data-tab="campaigns">Campaigns</button>
       <button type="button" data-tab="settings">Settings</button>
     </nav>
+    <button type="button" class="live-pill" id="live-pill" data-goto="overview" title="Visitors with a page of the site open and in view right now"><i class="dot" aria-hidden="true"></i><b id="live-pill-n">—</b>&nbsp;online</button>
     <div class="range" role="group" aria-label="Date range">
       <button type="button" data-range="7d">7D</button>
       <button type="button" data-range="30d" class="on">30D</button>
@@ -37,6 +38,16 @@
   <!-- OVERVIEW -->
   <section id="tab-overview" class="tab">
     <div class="head"><h1>Overview</h1><p class="sub" id="ov-sub">—</p></div>
+    <div class="card live" id="live">
+      <div class="live-main">
+        <span class="live-label"><i class="dot" aria-hidden="true"></i>Now online</span>
+        <b id="live-n" aria-live="polite">—</b>
+        <small id="live-note">Open pages in view, last 50 seconds</small>
+      </div>
+      <div class="live-col"><h2>Pages</h2><ul id="live-pages" class="live-list"></ul></div>
+      <div class="live-col"><h2>Devices</h2><ul id="live-devices" class="live-list"></ul></div>
+      <div class="live-col"><h2>Countries</h2><ul id="live-countries" class="live-list"></ul></div>
+    </div>
     <div class="kpis">
       <div class="kpi"><span>Page views</span><b id="k-views">—</b><small>Own cookieless count; no unique visitors</small></div>
       <div class="kpi"><span>Product clicks</span><b id="k-clicks">—</b><small>Clicks on product buttons</small></div>

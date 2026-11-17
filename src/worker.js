@@ -3,6 +3,7 @@
  *
  * Routes (the Worker runs first only for /admin* and /api/*; everything else is served as static assets):
  *   POST /api/e                  cookieless website event (view / cta / download). No identifiers stored.
+ *   POST /api/p                  live presence heartbeat ("Now online"). Kept in memory only (Durable Object), never stored.
  *   POST /api/payhip/webhook     Payhip "paid" / "refunded" webhook (signature = sha256(API key)).
  *   GET  /admin, /admin/*        admin UI (static) — only with a valid Cloudflare Access token.
  *   /api/admin/*                 admin JSON API — only with a valid Cloudflare Access token.
@@ -13,6 +14,7 @@
  *   ACCESS_TEAM      Cloudflare Access team domain, e.g. "creatorsignals.cloudflareaccess.com"
  *   ACCESS_AUD       Access application audience (AUD) tag
  *   ADMIN_EMAILS     optional comma-separated allow-list, checked on top of the Access policy
+ *   PRESENCE         Durable Object namespace for the live "Now online" counter (class Presence)
  *   PAYHIP_API_KEY   secret — Payhip Settings → Developer → API key (never in the repo)
  * If ACCESS_TEAM / ACCESS_AUD are missing, the admin area stays closed (fail closed).
  */
@@ -32,6 +34,7 @@ export default {
     const p = url.pathname;
     try {
       if (p === "/api/e") return await collect(request, env, url, ctx);
+      if (p === "/api/p") return await presenceBeat(request, env, url);
       if (p === "/api/payhip/webhook") return await payhipWebhook(request, env);
       if (p === "/admin" || p.startsWith("/admin/") || p.startsWith("/api/admin/")) {
         const who = await requireAccess(request, env);
@@ -111,6 +114,78 @@ async function collect(request, env, url, ctx) {
   // Retention: website events are kept for 25 months (privacy policy). Pruned occasionally, off the request path.
   if (Math.random() < 0.002 && ctx) ctx.waitUntil(env.DB.prepare("DELETE FROM events WHERE ts < ?").bind(t - EVENT_RETENTION_DAYS * 86400).run());
   return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
+}
+
+/* ------------------------------------------------------------------ */
+/* Live presence ("Now online")                                        */
+/* ------------------------------------------------------------------ */
+// Each open page that is in view sends a heartbeat every PRESENCE_BEAT seconds with a random number that exists only
+// in that page's memory (no cookie, no storage; a new number on every page load). The Durable Object below keeps
+// these in memory for at most PRESENCE_TTL seconds; nothing is written to D1 or to disk.
+const PRESENCE_BEAT = 20;
+const PRESENCE_TTL = 50;
+const PRESENCE_MAX = 20000;
+const PID_RE = /^[a-f0-9]{16,32}$/;
+
+async function presenceBeat(request, env, url) {
+  if (request.method !== "POST") return text("method not allowed", 405, { allow: "POST" });
+  const origin = request.headers.get("origin");
+  if (origin && new URL(origin).host !== url.host) return text("forbidden", 403);
+  const ua = request.headers.get("user-agent") || "";
+  if (BOT_RE.test(ua)) return new Response(null, { status: 204 });
+  if (/(^|;\s*)CF_Authorization=/.test(request.headers.get("cookie") || "")) return new Response(null, { status: 204 });
+  const raw = await request.text();
+  if (raw.length > 512) return text("too large", 413);
+  let b;
+  try { b = JSON.parse(raw); } catch { return text("bad request", 400); }
+  const id = typeof b.i === "string" && PID_RE.test(b.i) ? b.i : null;
+  const leave = b.a === "leave";
+  const path = typeof b.p === "string" ? b.p.split(/[?#]/)[0].slice(0, 200) : null;
+  if (!id || (!leave && (!path || !path.startsWith("/") || path.startsWith("/admin")))) return text("bad request", 400);
+  if (!env.PRESENCE) return new Response(null, { status: 204 });
+  const country = (request.cf && typeof request.cf.country === "string" && /^[A-Z]{2}$/.test(request.cf.country)) ? request.cf.country : null;
+  const device = /Mobi|Android|iPhone|iPad/i.test(ua) ? "mobile" : "desktop";
+  const stub = env.PRESENCE.get(env.PRESENCE.idFromName("site"));
+  await stub.fetch("https://presence/beat", { method: "POST", body: JSON.stringify(leave ? { i: id, a: "leave" } : { i: id, p: path, c: country, d: device }) });
+  return new Response(null, { status: 204, headers: { "cache-control": "no-store" } });
+}
+
+async function liveNow(env) {
+  if (!env.PRESENCE) return json({ available: false });
+  const r = await env.PRESENCE.get(env.PRESENCE.idFromName("site")).fetch("https://presence/now");
+  return json({ available: true, ...(await r.json()) });
+}
+
+/** Durable Object: in-memory list of open pages. One instance ("site") for the whole website. */
+export class Presence {
+  static TTL = PRESENCE_TTL;
+  constructor(state, env) { this.state = state; this.pages = new Map(); this.since = Date.now(); }
+  prune(t) { for (const [k, v] of this.pages) if (t - v.t > PRESENCE_TTL * 1000) this.pages.delete(k); }
+  async fetch(request) {
+    const t = Date.now();
+    const { pathname } = new URL(request.url);
+    this.prune(t);
+    if (pathname === "/beat" && request.method === "POST") {
+      let b; try { b = await request.json(); } catch { return new Response(null, { status: 400 }); }
+      if (b.a === "leave") this.pages.delete(b.i);
+      else if (this.pages.has(b.i) || this.pages.size < PRESENCE_MAX) this.pages.set(b.i, { t, p: b.p, c: b.c || null, d: b.d || "desktop" });
+      return new Response(null, { status: 204 });
+    }
+    if (pathname === "/now") {
+      const tally = (key) => {
+        const m = new Map();
+        for (const v of this.pages.values()) { const k = v[key] || "—"; m.set(k, (m.get(k) || 0) + 1); }
+        return [...m].map(([k, n]) => ({ k, n })).sort((a, b) => b.n - a.n || String(a.k).localeCompare(String(b.k)));
+      };
+      return new Response(JSON.stringify({
+        online: this.pages.size, at: Math.floor(t / 1000), window: PRESENCE_TTL, beat: PRESENCE_BEAT,
+        // Right after a deploy or restart the list is empty until the next heartbeats arrive (at most one beat interval).
+        warming: t - this.since < PRESENCE_BEAT * 1000,
+        pages: tally("p").slice(0, 10), devices: tally("d"), countries: tally("c").slice(0, 10),
+      }), { headers: { "content-type": "application/json", "cache-control": "no-store" } });
+    }
+    return new Response(null, { status: 404 });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -351,6 +426,7 @@ async function adminApi(request, env, url, who) {
   }
 
   if (p === "/me") return json({ email: who.email, tz: TZ });
+  if (p === "/live") return liveNow(env);
 
   if (p === "/overview") {
     const ev = await one(env, `SELECT SUM(kind='view') AS views, SUM(${BTN}) AS clicks, SUM(kind='download') AS downloads,
